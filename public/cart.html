@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nour Tech</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <a class="logo" href="/">
+        <span>NT</span>
+        Nour Tech
+      </a>
+      <nav>
+        <a href="/index.html">Inventory</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
+        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
+        <a href="/admin.html" data-requires-role="admin">Admin</a>
+        <span id="nav-user" class="nav-user" hidden></span>
+        <a href="/signup.html" id="nav-signup">Sign Up</a>
+        <a href="/login.html" id="nav-auth">Login</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h1>Your Cart</h1>
+        <p style="color: var(--text-muted); max-width: 680px;">
+          Review every laptop in your basket, tweak quantities, or remove builds you no longer need. When
+          you’re ready, continue to checkout to confirm delivery details and cash-on-delivery instructions.
+        </p>
+        <div id="cart-status" class="order-status"></div>
+        <div id="cart-empty" class="empty-state">
+          Your cart is empty right now. <a href="/index.html">Browse the latest laptops</a> and add your first build.
+        </div>
+        <div id="cart-content" hidden>
+          <div class="table-scroll">
+            <table class="orders-table cart-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Unit Price</th>
+                  <th>Qty</th>
+                  <th>Line Total</th>
+                  <th>Remove</th>
+                </tr>
+              </thead>
+              <tbody id="cart-body"></tbody>
+            </table>
+          </div>
+          <div class="cart-summary">
+            <span>Total</span>
+            <strong id="cart-total">E£0</strong>
+          </div>
+          <div class="btn-stack">
+            <button class="btn btn-outline" id="clear-cart">Clear Cart</button>
+            <button class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Nour Tech &copy; <span id="year"></span>. Trusted laptop sourcing across MENA.
+      <br />
+      Need a custom configuration? <a href="/contact.html">Talk to the team.</a>
+    </footer>
+
+    <script src="/auth.js" defer></script>
+    <script src="/cart-storage.js" defer></script>
+    <script src="/cart.js" defer></script>
+  </body>
+</html>

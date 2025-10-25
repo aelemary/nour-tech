@@ -1,0 +1,216 @@
+{
+  "companies": [
+    {
+      "id": "comp-lenovo",
+      "name": "Lenovo",
+      "description": "Business-focused laptops and gaming machines known for durability."
+    },
+    {
+      "id": "comp-asus",
+      "name": "ASUS",
+      "description": "Innovative designs spanning ZenBook ultrabooks and Republic of Gamers rigs."
+    },
+    {
+      "id": "comp-hp",
+      "name": "HP",
+      "description": "Versatile lineup covering Spectre premium ultrabooks and Omen gaming systems."
+    }
+  ],
+  "models": [
+    {
+      "id": "model-x1-carbon",
+      "companyId": "comp-lenovo",
+      "name": "ThinkPad X1 Carbon",
+      "gpu": "Intel Iris Xe",
+      "cpu": "Intel Core i7-1360P"
+    },
+    {
+      "id": "model-zenbook-14",
+      "companyId": "comp-asus",
+      "name": "ZenBook 14 OLED",
+      "gpu": "Intel Iris Xe",
+      "cpu": "Intel Core i7-1355U"
+    },
+    {
+      "id": "model-rog-strix",
+      "companyId": "comp-asus",
+      "name": "ROG Strix G16",
+      "gpu": "NVIDIA RTX 4070",
+      "cpu": "Intel Core i9-13980HX"
+    },
+    {
+      "id": "model-spectre-x360",
+      "companyId": "comp-hp",
+      "name": "Spectre x360 14",
+      "gpu": "Intel Iris Xe",
+      "cpu": "Intel Core i7-1365U"
+    },
+    {
+      "id": "model-omen-17",
+      "companyId": "comp-hp",
+      "name": "Omen 17",
+      "gpu": "NVIDIA RTX 4080",
+      "cpu": "Intel Core i9-13900HX"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-admin",
+      "username": "admin",
+      "passwordHash": "1823698faba75c9ac635438b9832c511598a607ae064a5474c93ca9f4855a3ea",
+      "role": "admin",
+      "fullName": "Site Admin"
+    },
+    {
+      "id": "user-sandra",
+      "username": "sandra",
+      "passwordHash": "e606e38b0d8c19b24cf0ee3808183162ea7cd63ff7912dbb22b5e803286b4446",
+      "role": "customer",
+      "fullName": "Sandra Lee"
+    }
+  ],
+  "laptops": [
+    {
+      "id": "lap-x1-carbon-2024",
+      "modelId": "model-x1-carbon",
+      "companyId": "comp-lenovo",
+      "title": "Lenovo ThinkPad X1 Carbon Gen 11",
+      "price": 56970,
+      "currency": "EGP",
+      "gpu": "Intel Iris Xe",
+      "cpu": "Intel Core i7-1360P",
+      "ram": "16 GB LPDDR5",
+      "storage": "1 TB NVMe SSD",
+      "display": "14\" 2.8K OLED",
+      "description": "Premium ultra-light notebook with carbon fiber chassis, Dolby Vision display, and robust security.",
+      "images": [
+        "https://placehold.co/800x500?text=ThinkPad+X1+Carbon",
+        "https://placehold.co/800x500?text=ThinkPad+Security"
+      ],
+      "stock": 6
+    },
+    {
+      "id": "lap-zenbook-14-2024",
+      "modelId": "model-zenbook-14",
+      "companyId": "comp-asus",
+      "title": "ASUS ZenBook 14 OLED UX3402",
+      "price": 41970,
+      "currency": "EGP",
+      "gpu": "Intel Iris Xe",
+      "cpu": "Intel Core i7-1355U",
+      "ram": "16 GB LPDDR5",
+      "storage": "512 GB NVMe SSD",
+      "display": "14\" 2.8K OLED",
+      "description": "Ultra-portable OLED laptop with edge-to-edge keyboard and long-lasting 75Wh battery.",
+      "images": [
+        "https://placehold.co/800x500?text=ZenBook+14+OLED",
+        "https://placehold.co/800x500?text=ZenBook+Hinge"
+      ],
+      "stock": 8
+    },
+    {
+      "id": "lap-rog-strix-2024",
+      "modelId": "model-rog-strix",
+      "companyId": "comp-asus",
+      "title": "ASUS ROG Strix G16 Advantage Edition",
+      "price": 74970,
+      "currency": "EGP",
+      "gpu": "NVIDIA RTX 4070",
+      "cpu": "Intel Core i9-13980HX",
+      "ram": "32 GB DDR5",
+      "storage": "2 TB NVMe SSD",
+      "display": "16\" QHD+ 240Hz",
+      "description": "Enthusiast gaming system with tri-fan intelligent cooling and customizable Aura Sync lighting.",
+      "images": [
+        "https://placehold.co/800x500?text=ROG+Strix+G16",
+        "https://placehold.co/800x500?text=ROG+RGB"
+      ],
+      "stock": 5
+    },
+    {
+      "id": "lap-spectre-x360-2024",
+      "modelId": "model-spectre-x360",
+      "companyId": "comp-hp",
+      "title": "HP Spectre x360 14 2-in-1",
+      "price": 46470,
+      "currency": "EGP",
+      "gpu": "Intel Iris Xe",
+      "cpu": "Intel Core i7-1365U",
+      "ram": "16 GB LPDDR5",
+      "storage": "1 TB NVMe SSD",
+      "display": "13.5\" 3K2K OLED Touch",
+      "description": "Convertible premium laptop with 3:2 aspect ratio display and HP Presence conferencing suite.",
+      "images": [
+        "https://placehold.co/800x500?text=Spectre+x360",
+        "https://placehold.co/800x500?text=Spectre+Tent"
+      ],
+      "stock": 7
+    },
+    {
+      "id": "lap-omen-17-2024",
+      "modelId": "model-omen-17",
+      "companyId": "comp-hp",
+      "title": "HP Omen 17 Gaming Laptop",
+      "price": 80970,
+      "currency": "EGP",
+      "gpu": "NVIDIA RTX 4080",
+      "cpu": "Intel Core i9-13900HX",
+      "ram": "32 GB DDR5",
+      "storage": "2 TB NVMe SSD",
+      "display": "17.3\" QHD 240Hz",
+      "description": "Flagship gaming laptop with Omen Tempest cooling and per-key RGB powered by HyperX.",
+      "images": [
+        "https://placehold.co/800x500?text=Omen+17+Front",
+        "https://placehold.co/800x500?text=Omen+17+Side"
+      ],
+      "stock": 3
+    }
+  ],
+  "orders": [
+    {
+      "id": "order-1001",
+      "laptopId": "lap-x1-carbon-2024",
+      "userId": "user-sandra",
+      "customerName": "Sandra Lee",
+      "phone": "+1 555 0192",
+      "email": "sandra@example.com",
+      "address": "742 Evergreen Terrace, Springfield",
+      "paymentType": "Cash on Delivery",
+      "paymentCurrency": "EGP",
+      "status": "pending",
+      "quantity": 1,
+      "notes": "",
+      "createdAt": "2024-04-01T10:15:00.000Z"
+    },
+    {
+      "id": "order-1002",
+      "laptopId": "lap-rog-strix-2024",
+      "userId": "user-sandra",
+      "customerName": "Devin Patel",
+      "phone": "+1 555 4432",
+      "email": "devin@example.com",
+      "address": "84 Mulberry Lane, Austin",
+      "paymentType": "Cash on Delivery",
+      "paymentCurrency": "EGP",
+      "status": "confirmed",
+      "quantity": 1,
+      "notes": "",
+      "createdAt": "2024-04-12T15:47:00.000Z"
+    },
+    {
+      "id": "order-1761409303742",
+      "laptopId": "lap-x1-carbon-2024",
+      "userId": "user-sandra",
+      "customerName": "Amr Badr",
+      "phone": "+20102010020",
+      "email": "",
+      "address": "f",
+      "paymentType": "Cash on Delivery",
+      "paymentCurrency": "EGP",
+      "status": "pending",
+      "quantity": 1,
+      "notes": "e",
+      "createdAt": "2025-10-25T16:21:43.742Z"
+    }
+  ]
+}

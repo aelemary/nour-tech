@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nour Tech</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <a class="logo" href="/">
+        <span>NT</span>
+        Nour Tech
+      </a>
+      <nav>
+        <a href="/index.html">Inventory</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
+        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
+        <a href="/admin.html" data-requires-role="admin">Admin</a>
+        <span id="nav-user" class="nav-user" hidden></span>
+        <a href="/signup.html" id="nav-signup">Sign Up</a>
+        <a href="/login.html" id="nav-auth">Login</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h1>Operations Dashboard</h1>
+        <p style="color: var(--text-muted); max-width: 720px;">
+          Launch new brands, publish laptop configurations, and monitor cash-on-delivery orders in real time.
+          Everything persists to the local JSON datastore, making this perfect for rapid prototyping before
+          moving to a production database or payments stack.
+        </p>
+        <div class="stats-grid" id="admin-stats">
+          <div class="stat-card">
+            <h3>Brands Live</h3>
+            <strong id="stat-admin-brands">0</strong>
+          </div>
+          <div class="stat-card">
+            <h3>Models Indexed</h3>
+            <strong id="stat-admin-models">0</strong>
+          </div>
+          <div class="stat-card">
+            <h3>Laptops Listed</h3>
+            <strong id="stat-admin-laptops">0</strong>
+          </div>
+          <div class="stat-card">
+            <h3>Open COD Orders</h3>
+            <strong id="stat-admin-orders">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Catalog Management</h2>
+        <div class="admin-grid">
+          <form id="company-form" class="panel-lite">
+            <h3>Add Laptop Brand</h3>
+            <label>
+              Brand Name
+              <input type="text" name="name" placeholder="MSI, Dell, Razer…" required />
+            </label>
+            <label>
+              Brand Overview
+              <textarea
+                name="description"
+                rows="3"
+                placeholder="Optional: service coverage, product focus"
+              ></textarea>
+            </label>
+            <button type="submit" class="btn btn-primary">Save Brand</button>
+            <div class="order-status" id="company-status"></div>
+          </form>
+
+          <form id="model-form" class="panel-lite">
+            <h3>Add Laptop Model</h3>
+            <label>
+              Parent Brand
+              <select name="companyId" id="model-company" required>
+                <option value="">Select Brand</option>
+              </select>
+            </label>
+            <label>
+              Model Name
+              <input type="text" name="name" placeholder="Legion 7i, Zephyrus G14…" required />
+            </label>
+            <label>
+              Default GPU
+              <input type="text" name="gpu" placeholder="NVIDIA RTX 4060" />
+            </label>
+            <label>
+              Default CPU
+              <input type="text" name="cpu" placeholder="Intel Core i9-13900H" />
+            </label>
+            <button type="submit" class="btn btn-primary">Save Model</button>
+            <div class="order-status" id="model-status"></div>
+          </form>
+
+          <form id="laptop-form" class="panel-lite">
+            <h3>Publish Laptop Listing</h3>
+            <label>
+              Base Model
+              <select name="modelId" id="laptop-model" required>
+                <option value="">Select Model</option>
+              </select>
+            </label>
+            <label>
+              Listing Title
+              <input
+                type="text"
+                name="title"
+                placeholder="Lenovo Legion 7i 16&quot; RTX 4080"
+                required
+              />
+            </label>
+            <label>
+              Price (EGP)
+              <input type="number" name="price" min="0" step="1000" placeholder="60000" required />
+            </label>
+            <label>
+              Currency (ISO)
+              <input type="text" name="currency" maxlength="3" placeholder="EGP" />
+            </label>
+            <label>
+              GPU
+              <input type="text" name="gpu" placeholder="NVIDIA RTX 4080" />
+            </label>
+            <label>
+              CPU
+              <input type="text" name="cpu" placeholder="Intel Core i9-13980HX" />
+            </label>
+            <label>
+              RAM
+              <input type="text" name="ram" placeholder="32 GB DDR5" />
+            </label>
+            <label>
+              Storage
+              <input type="text" name="storage" placeholder="1 TB NVMe SSD" />
+            </label>
+            <label>
+              Display
+              <input type="text" name="display" placeholder="16&quot; QHD+ 240Hz" />
+            </label>
+            <label>
+              Stock Count
+              <input type="number" name="stock" min="0" step="1" placeholder="5" />
+            </label>
+            <label>
+              Image Upload
+              <div class="upload-control">
+                <button type="button" class="btn btn-outline" id="image-upload-button">
+                  Upload &amp; Attach Image
+                </button>
+                <input type="file" id="image-file-input" accept="image/*" hidden />
+              </div>
+              <span class="field-hint">PNG, JPG, or WebP up to 5 MB. Uploaded links auto-fill below.</span>
+            </label>
+            <div id="image-preview" class="image-preview"></div>
+            <label>
+              Image URLs (comma separated or one per line)
+              <textarea
+                name="images"
+                rows="3"
+                placeholder="https://placehold.co/800x500?text=Front"
+              ></textarea>
+            </label>
+            <label>
+              Short Description
+              <textarea
+                name="description"
+                rows="3"
+                placeholder="Cooling upgrades, warranty notes, accessories…"
+              ></textarea>
+            </label>
+            <button type="submit" class="btn btn-primary">Publish Listing</button>
+            <div class="order-status" id="laptop-status"></div>
+          </form>
+        </div>
+        <div class="admin-grid" style="margin-top: 1.5rem;">
+          <div class="panel-lite">
+            <h3>Brands on File</h3>
+            <ul id="company-list" class="chip-list"></ul>
+          </div>
+          <div class="panel-lite">
+            <h3>Models</h3>
+            <ul id="model-list" class="chip-list"></ul>
+          </div>
+          <div class="panel-lite" style="grid-column: span 2;">
+            <h3>Published Laptops</h3>
+            <div class="table-scroll">
+              <table class="orders-table catalog-table">
+                <thead>
+                  <tr>
+                    <th>Listing</th>
+                    <th>Model</th>
+                    <th>Price</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="catalog-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Recent Orders</h2>
+        <div style="margin-bottom: 1rem;">
+          <label style="max-width: 240px;">
+            Filter by Status
+            <select id="order-status-filter">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+        </div>
+        <div class="order-status" id="orders-status"></div>
+        <div style="overflow-x: auto;">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Placed</th>
+                <th>Customer</th>
+                <th>Contact</th>
+                <th>Payment</th>
+                <th>Listing</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="orders-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>User Directory</h2>
+        <p style="color: var(--text-muted);">
+          Search for customer accounts, check their order counts, and deactivate profiles that are no longer in use.
+          Admin accounts stay protected.
+        </p>
+        <div class="filters" style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+          <label style="flex: 1 1 240px;">
+            Search Users
+            <input type="search" id="user-search" placeholder="username, name, or email" />
+          </label>
+        </div>
+        <div class="order-status" id="users-status"></div>
+        <div class="table-scroll">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Orders</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="users-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Nour Tech &copy; <span id="year"></span>. Trusted laptop sourcing across MENA.
+      <br />
+      Need a custom configuration? <a href="/contact.html">Talk to the team.</a>
+    </footer>
+
+    <script src="/auth.js" defer></script>
+    <script src="/cart-storage.js" defer></script>
+    <script src="/admin.js" defer></script>
+  </body>
+</html>

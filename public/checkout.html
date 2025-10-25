@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nour Tech</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <a class="logo" href="/">
+        <span>NT</span>
+        Nour Tech
+      </a>
+      <nav>
+        <a href="/index.html">Inventory</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
+        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
+        <a href="/admin.html" data-requires-role="admin">Admin</a>
+        <span id="nav-user" class="nav-user" hidden></span>
+        <a href="/signup.html" id="nav-signup">Sign Up</a>
+        <a href="/login.html" id="nav-auth">Login</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h1>Checkout</h1>
+        <p style="color: var(--text-muted); max-width: 720px;">
+          Confirm the laptops you want, add delivery details, and secure cash-on-delivery. Our team will
+          reach out within 12 working hours to finalise logistics and delivery windows.
+        </p>
+        <div id="checkout-status" class="order-status"></div>
+        <div id="checkout-empty" class="empty-state">
+          No items queued up. <a href="/index.html">Browse laptops</a> to start a new order.
+        </div>
+        <div id="checkout-content" hidden>
+          <div class="panel-lite">
+            <h2>Order Summary</h2>
+            <ul id="summary-list" class="summary-list"></ul>
+            <div class="cart-summary">
+              <span>Total</span>
+              <strong id="checkout-total">E£0</strong>
+            </div>
+          </div>
+          <form id="checkout-form" class="order-form" autocomplete="on">
+            <h2 style="margin: 0;">Delivery Details</h2>
+            <label>
+              Full Name
+              <input type="text" name="customerName" placeholder="Name as it appears on the invoice" required />
+            </label>
+            <label>
+              Email (optional)
+              <input type="email" name="email" placeholder="example@email.com" />
+            </label>
+            <label>
+              Phone / WhatsApp
+              <input type="tel" name="phone" placeholder="+20 10 0000 0000" required />
+            </label>
+            <label>
+              Delivery Address
+              <textarea
+                name="address"
+                rows="3"
+                placeholder="City, district, street, building"
+                required
+              ></textarea>
+            </label>
+            <label>
+              Payment Type
+              <select name="paymentType" required>
+                <option value="Cash on Delivery">Cash on Delivery</option>
+              </select>
+            </label>
+            <label>
+              Order Notes (optional)
+              <textarea
+                name="notes"
+                rows="3"
+                placeholder="Access instructions, preferred delivery slot, extra details"
+              ></textarea>
+            </label>
+            <button type="submit" class="btn btn-primary" id="checkout-submit">
+              Place Order
+            </button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Nour Tech &copy; <span id="year"></span>. Trusted laptop sourcing across MENA.
+      <br />
+      Need a custom configuration? <a href="/contact.html">Talk to the team.</a>
+    </footer>
+
+    <script src="/auth.js" defer></script>
+    <script src="/cart-storage.js" defer></script>
+    <script src="/checkout.js" defer></script>
+  </body>
+</html>

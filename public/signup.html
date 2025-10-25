@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nour Tech</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <a class="logo" href="/">
+        <span>NT</span>
+        Nour Tech
+      </a>
+      <nav>
+        <a href="/index.html">Inventory</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
+        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
+        <a href="/admin.html" data-requires-role="admin">Admin</a>
+        <span id="nav-user" class="nav-user" hidden></span>
+        <a href="/signup.html" id="nav-signup">Sign Up</a>
+        <a href="/login.html" id="nav-auth">Login</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="panel" style="max-width: 520px; margin: 2rem auto;">
+        <h1 style="margin-top: 0;">Create an Account</h1>
+        <p style="color: var(--text-muted);">
+          Sign up to track orders, save your details for future purchases, and get faster updates from the
+          Nour Tech team.
+        </p>
+        <form id="signup-form" class="order-form" autocomplete="on">
+          <label>
+            Full Name
+            <input type="text" name="fullName" placeholder="Your full name" />
+          </label>
+          <label>
+            Username
+            <input type="text" name="username" placeholder="username" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" placeholder="At least 6 characters" minlength="6" required />
+          </label>
+          <button type="submit" class="btn btn-primary">Create Account</button>
+        </form>
+        <div id="signup-status" class="order-status"></div>
+        <p style="margin-top: 1.5rem;">
+          Already have an account?
+          <a href="/login.html">Log in here</a>.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      Nour Tech &copy; <span id="year"></span>. Trusted laptop sourcing across MENA.
+      <br />
+      Need a custom configuration? <a href="/contact.html">Talk to the team.</a>
+    </footer>
+
+    <script src="/auth.js" defer></script>
+    <script src="/cart-storage.js" defer></script>
+    <script src="/signup.js" defer></script>
+  </body>
+</html>

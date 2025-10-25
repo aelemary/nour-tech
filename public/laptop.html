@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nour Tech</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <a class="logo" href="/">
+        <span>NT</span>
+        Nour Tech
+      </a>
+      <nav>
+        <a href="/index.html">Inventory</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
+        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
+        <a href="/admin.html" data-requires-role="admin">Admin</a>
+        <span id="nav-user" class="nav-user" hidden></span>
+        <a href="/signup.html" id="nav-signup">Sign Up</a>
+        <a href="/login.html" id="nav-auth">Login</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="panel" id="detail-panel">
+        <a class="btn btn-outline" href="/index.html" style="margin-bottom: 1rem"
+          >← Back to Inventory</a
+        >
+        <div id="detail-layout" class="detail-layout"></div>
+      </section>
+    </main>
+
+    <footer>
+      Nour Tech &copy; <span id="year"></span>. Trusted laptop sourcing across MENA.
+      <br />
+      Need a custom configuration? <a href="/contact.html">Talk to the team.</a>
+    </footer>
+
+    <script src="/auth.js" defer></script>
+    <script src="/cart-storage.js" defer></script>
+    <script src="/laptop.js" defer></script>
+  </body>
+</html>
