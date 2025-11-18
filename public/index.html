@@ -24,100 +24,31 @@
       </nav>
     </header>
 
-    <section class="hero">
-      <div>
-        <h1>Curated Laptops Built for Every Workflow</h1>
-        <p>
-          Discover ready-to-ship Lenovo, ASUS, HP, and more. Every unit is benchmarked, thermally
-          tested, and set for cash-on-delivery within the week. Filter by brand, processor, RAM,
-          storage, GPU, or price to zero in on the machine that fits your workload.
-        </p>
-        <div class="hero-cta">
-          <a class="btn btn-primary" href="#inventory">Browse Live Inventory</a>
-          <a class="btn btn-outline" href="/contact.html">Talk to Sales</a>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>Why Shop With Us</h2>
-        <div class="stats-grid" id="stats-grid">
-          <div class="stat-card">
-            <h3>Trusted Brands</h3>
-            <strong id="stat-brands">0</strong>
-            <span>Every brand is vetted for warranty support and after-sales coverage.</span>
-          </div>
-          <div class="stat-card">
-            <h3>Ready-to-Ship Builds</h3>
-            <strong id="stat-laptops">0</strong>
-            <span>Stress-tested hardware with live health reports and burn-in logs.</span>
-          </div>
-          <div class="stat-card">
-            <h3>GPU Profiles</h3>
-            <strong id="stat-gpu">0</strong>
-            <span>Compare NVIDIA, AMD, and integrated graphics configurations instantly.</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <main>
       <section class="panel" id="inventory">
-        <h2>Find Your Next Laptop</h2>
-        <form id="filter-form" class="filters">
-          <label>
-            Search Models
-            <input type="search" id="search" name="search" placeholder="ThinkPad, ROG, Omen…" />
-          </label>
-          <label>
-            Brand
-            <select id="companyId" name="companyId">
-              <option value="">All Brands</option>
-            </select>
-          </label>
-          <label>
-            GPU
-            <select id="gpu" name="gpu">
-              <option value="">Any GPU</option>
-              <option value="NVIDIA">NVIDIA</option>
-              <option value="AMD">AMD</option>
-              <option value="Intel">Intel / Integrated</option>
-            </select>
-          </label>
-          <label>
-            Processor
-            <select id="cpu" name="cpu">
-              <option value="">All Processors</option>
-            </select>
-          </label>
-          <label>
-            RAM
-            <select id="ram" name="ram">
-              <option value="">All Memory Sizes</option>
-            </select>
-          </label>
-          <label>
-            Storage
-            <select id="storage" name="storage">
-              <option value="">All Storage Options</option>
-            </select>
-          </label>
-          <label>
-            Min Price (EGP)
-            <input type="number" id="minPrice" name="minPrice" min="0" step="1000" placeholder="0" />
-          </label>
-          <label>
-            Max Price (EGP)
-            <input type="number" id="maxPrice" name="maxPrice" min="0" step="1000" placeholder="90000" />
-          </label>
-          <button type="submit" class="btn btn-primary">Apply Filters</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <h2>Available Inventory</h2>
+        <div class="inventory-header">
+          <div>
+            <h1>Available Laptops</h1>
+            <p class="inventory-subtitle">
+              Search the live Nour Tech catalog and jump straight into the listing you need.
+            </p>
+          </div>
+          <form id="filter-form" class="search-form">
+            <label>
+              <input
+                type="search"
+                id="search"
+                name="search"
+                placeholder="Search by title, GPU, RAM, or storage…"
+              />
+            </label>
+            <button type="submit" class="btn btn-primary">Search</button>
+          </form>
+        </div>
         <div id="inventory-status" class="order-status"></div>
         <div id="results" class="laptop-grid"></div>
         <div id="empty" class="empty-state" hidden>
-          Nothing matches those filters yet. Adjust the criteria or check back soon for fresh stock.
+          Nothing matched that search. Try a different keyword or come back soon for fresh stock.
         </div>
       </section>
     </main>

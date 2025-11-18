@@ -2,7 +2,6 @@ const API_BASE = "/api";
 
 const state = {
   companies: [],
-  models: [],
   laptops: [],
   orders: [],
   orderFilter: "",
@@ -176,30 +175,8 @@ function populateCompanySelect(elementId) {
   }
 }
 
-function populateModelSelect() {
-  const select = document.getElementById("laptop-model");
-  if (!select) return;
-  const current = select.value;
-  select.innerHTML = '<option value="">Select Model</option>';
-  state.models
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .forEach((model) => {
-      const company = state.companies.find((c) => c.id === model.companyId);
-      const label = company ? `${company.name} • ${model.name}` : model.name;
-      const option = document.createElement("option");
-      option.value = model.id;
-      option.textContent = label;
-      select.appendChild(option);
-    });
-  if (current && state.models.find((model) => model.id === current)) {
-    select.value = current;
-  }
-}
-
 function updateStats() {
   document.getElementById("stat-admin-brands").textContent = state.companies.length;
-  document.getElementById("stat-admin-models").textContent = state.models.length;
   document.getElementById("stat-admin-laptops").textContent = state.laptops.length;
   const pending = state.orders.filter(
     (order) => order.status !== "completed" && order.status !== "cancelled"
@@ -307,33 +284,6 @@ function renderCompanyList() {
     });
 }
 
-function renderModelList() {
-  const list = document.getElementById("model-list");
-  if (!list) return;
-  list.innerHTML = "";
-  if (!state.models.length) {
-    const empty = document.createElement("li");
-    empty.textContent = "No models yet.";
-    empty.style.opacity = "0.7";
-    list.appendChild(empty);
-    return;
-  }
-  state.models
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .forEach((model) => {
-      const company = state.companies.find((company) => company.id === model.companyId);
-      const item = document.createElement("li");
-      item.innerHTML = `<span>${company ? `${company.name} • ` : ""}${model.name}</span>`;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.deleteModel = model.id;
-      button.textContent = "Remove";
-      item.appendChild(button);
-      list.appendChild(item);
-    });
-}
-
 function renderLaptopCatalog() {
   const tbody = document.getElementById("catalog-body");
   if (!tbody) return;
@@ -341,7 +291,7 @@ function renderLaptopCatalog() {
   if (!state.laptops.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 4;
+    cell.colSpan = 3;
     cell.style.textAlign = "center";
     cell.style.color = "var(--text-muted)";
     cell.textContent = "No listings published yet.";
@@ -354,12 +304,10 @@ function renderLaptopCatalog() {
     .slice()
     .sort((a, b) => a.title.localeCompare(b.title))
     .forEach((laptop) => {
-      const model = state.models.find((item) => item.id === laptop.modelId);
       const company = state.companies.find((item) => item.id === laptop.companyId);
       const row = document.createElement("tr");
       row.innerHTML = `
         <td><strong>${laptop.title}</strong><div class="field-hint">${company ? company.name : "—"}</div></td>
-        <td>${model ? model.name : "—"}</td>
         <td>${new Intl.NumberFormat("en-EG", {
           style: "currency",
           currency: laptop.currency || "EGP",
@@ -436,7 +384,7 @@ async function deleteCompany(companyId) {
   if (!companyId) return;
   const company = state.companies.find((item) => item.id === companyId);
   const confirmed = window.confirm(
-    `Delete brand "${company ? company.name : companyId}"? Models and listings under it will be removed.`
+    `Delete brand "${company ? company.name : companyId}"? Listings under it will be removed.`
   );
   if (!confirmed) return;
   try {
@@ -444,23 +392,15 @@ async function deleteCompany(companyId) {
       method: "DELETE",
     });
     state.companies = state.companies.filter((item) => item.id !== companyId);
-    const removedModelIds = new Set(state.models.filter((item) => item.companyId === companyId).map((m) => m.id));
     const removedLaptopIds = new Set(
-      state.laptops
-        .filter((item) => item.companyId === companyId || removedModelIds.has(item.modelId))
-        .map((item) => item.id)
+      state.laptops.filter((item) => item.companyId === companyId).map((item) => item.id)
     );
-    state.models = state.models.filter((item) => item.companyId !== companyId);
-    state.laptops = state.laptops.filter(
-      (item) => item.companyId !== companyId && !removedModelIds.has(item.modelId)
-    );
+    state.laptops = state.laptops.filter((item) => item.companyId !== companyId);
     state.orders = state.orders.map((order) =>
       removedLaptopIds.has(order.laptopId) ? { ...order, laptop: null } : order
     );
-    populateCompanySelect("model-company");
-    populateModelSelect();
+    populateCompanySelect("laptop-company");
     renderCompanyList();
-    renderModelList();
     renderLaptopCatalog();
     const filteredOrders = state.orderFilter
       ? state.orders.filter((order) => order.status === state.orderFilter)
@@ -472,39 +412,6 @@ async function deleteCompany(companyId) {
   } catch (error) {
     console.error(error);
     showStatus("company-status", "Could not delete brand. Please try again.", "error");
-  }
-}
-
-async function deleteModel(modelId) {
-  if (!modelId) return;
-  const model = state.models.find((item) => item.id === modelId);
-  const confirmed = window.confirm(
-    `Delete model "${model ? model.name : modelId}" and any listings attached to it?`
-  );
-  if (!confirmed) return;
-  try {
-    await fetchJSON(`${API_BASE}/models/${encodeURIComponent(modelId)}`, {
-      method: "DELETE",
-    });
-    const removedLaptopIds = new Set(state.laptops.filter((item) => item.modelId === modelId).map((item) => item.id));
-    state.models = state.models.filter((item) => item.id !== modelId);
-    state.laptops = state.laptops.filter((item) => item.modelId !== modelId);
-    populateModelSelect();
-    renderModelList();
-    renderLaptopCatalog();
-    state.orders = state.orders.map((order) =>
-      removedLaptopIds.has(order.laptopId) ? { ...order, laptop: null } : order
-    );
-    const filteredOrders = state.orderFilter
-      ? state.orders.filter((order) => order.status === state.orderFilter)
-      : state.orders;
-    renderOrders(filteredOrders);
-    renderUsersList(state.userSearch);
-    updateStats();
-    showStatus("model-status", "Model removed successfully.");
-  } catch (error) {
-    console.error(error);
-    showStatus("model-status", "Could not delete model. Please try again.", "error");
   }
 }
 
@@ -662,15 +569,13 @@ async function refreshUsers({ quiet = false } = {}) {
 
 async function bootstrap() {
   try {
-    const [companies, models, laptops, orders, users] = await Promise.all([
+    const [companies, laptops, orders, users] = await Promise.all([
       fetchJSON(`${API_BASE}/companies`),
-      fetchJSON(`${API_BASE}/models`),
       fetchJSON(`${API_BASE}/laptops`),
       fetchJSON(`${API_BASE}/orders`),
       fetchJSON(`${API_BASE}/users`),
     ]);
     state.companies = companies;
-    state.models = models;
     state.laptops = laptops;
     state.orders = orders;
     state.users = users.map((user) => ({
@@ -681,10 +586,8 @@ async function bootstrap() {
     }));
     state.userSearch = "";
     state.orderFilter = "";
-    populateCompanySelect("model-company");
-    populateModelSelect();
+    populateCompanySelect("laptop-company");
     renderCompanyList();
-    renderModelList();
     renderLaptopCatalog();
     renderOrders(orders);
     renderUsersList();
@@ -719,8 +622,7 @@ async function handleCompanySubmit(event) {
       body: JSON.stringify(payload),
     });
     state.companies.push(company);
-    populateCompanySelect("model-company");
-    populateModelSelect();
+    populateCompanySelect("laptop-company");
     renderCompanyList();
     updateStats();
     showStatus("company-status", `Brand ${company.name} added.`);
@@ -731,34 +633,6 @@ async function handleCompanySubmit(event) {
       showStatus("company-status", "Admin access required to add brands.", "error");
     } else {
       showStatus("company-status", "Couldn't create brand.", "error");
-    }
-  }
-}
-
-async function handleModelSubmit(event) {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const formData = new FormData(form);
-  const payload = Object.fromEntries(formData.entries());
-  try {
-    showStatus("model-status", "Saving model…");
-    const model = await fetchJSON(`${API_BASE}/models`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    state.models.push(model);
-    populateModelSelect();
-    renderModelList();
-    updateStats();
-    showStatus("model-status", `Model ${model.name} added.`);
-    form.reset();
-  } catch (error) {
-    console.error(error);
-    if (error.status === 401 || error.status === 403) {
-      showStatus("model-status", "Admin access required to add models.", "error");
-    } else {
-      showStatus("model-status", "Couldn't create model.", "error");
     }
   }
 }
@@ -830,7 +704,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setYear();
 
   const companyForm = document.getElementById("company-form");
-  const modelForm = document.getElementById("model-form");
   const laptopForm = document.getElementById("laptop-form");
   const orderFilter = document.getElementById("order-status-filter");
   const uploadButton = document.getElementById("image-upload-button");
@@ -838,14 +711,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const imagesTextarea = document.querySelector('#laptop-form textarea[name="images"]');
   const imagePreview = document.getElementById("image-preview");
   const companyList = document.getElementById("company-list");
-  const modelList = document.getElementById("model-list");
   const catalogBody = document.getElementById("catalog-body");
   const ordersBody = document.getElementById("orders-body");
   const userSearchInput = document.getElementById("user-search");
   const usersBody = document.getElementById("users-body");
 
   if (companyForm) companyForm.addEventListener("submit", handleCompanySubmit);
-  if (modelForm) modelForm.addEventListener("submit", handleModelSubmit);
   if (laptopForm) laptopForm.addEventListener("submit", handleLaptopSubmit);
   if (orderFilter) {
     orderFilter.addEventListener("change", (event) => {
@@ -884,13 +755,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const button = event.target.closest("button[data-delete-company]");
       if (!button) return;
       deleteCompany(button.dataset.deleteCompany);
-    });
-  }
-  if (modelList) {
-    modelList.addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-delete-model]");
-      if (!button) return;
-      deleteModel(button.dataset.deleteModel);
     });
   }
   if (catalogBody) {

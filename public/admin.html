@@ -38,10 +38,6 @@
             <strong id="stat-admin-brands">0</strong>
           </div>
           <div class="stat-card">
-            <h3>Models Indexed</h3>
-            <strong id="stat-admin-models">0</strong>
-          </div>
-          <div class="stat-card">
             <h3>Laptops Listed</h3>
             <strong id="stat-admin-laptops">0</strong>
           </div>
@@ -73,36 +69,12 @@
             <div class="order-status" id="company-status"></div>
           </form>
 
-          <form id="model-form" class="panel-lite">
-            <h3>Add Laptop Model</h3>
-            <label>
-              Parent Brand
-              <select name="companyId" id="model-company" required>
-                <option value="">Select Brand</option>
-              </select>
-            </label>
-            <label>
-              Model Name
-              <input type="text" name="name" placeholder="Legion 7i, Zephyrus G14…" required />
-            </label>
-            <label>
-              Default GPU
-              <input type="text" name="gpu" placeholder="NVIDIA RTX 4060" />
-            </label>
-            <label>
-              Default CPU
-              <input type="text" name="cpu" placeholder="Intel Core i9-13900H" />
-            </label>
-            <button type="submit" class="btn btn-primary">Save Model</button>
-            <div class="order-status" id="model-status"></div>
-          </form>
-
           <form id="laptop-form" class="panel-lite">
             <h3>Publish Laptop Listing</h3>
             <label>
-              Base Model
-              <select name="modelId" id="laptop-model" required>
-                <option value="">Select Model</option>
+              Brand
+              <select name="companyId" id="laptop-company" required>
+                <option value="">Select Brand</option>
               </select>
             </label>
             <label>
@@ -116,7 +88,15 @@
             </label>
             <label>
               Price (EGP)
-              <input type="number" name="price" min="0" step="1000" placeholder="60000" required />
+              <input
+                type="number"
+                name="price"
+                min="0"
+                step="1"
+                inputmode="decimal"
+                placeholder="60000"
+                required
+              />
             </label>
             <label>
               Currency (ISO)
@@ -182,10 +162,6 @@
             <h3>Brands on File</h3>
             <ul id="company-list" class="chip-list"></ul>
           </div>
-          <div class="panel-lite">
-            <h3>Models</h3>
-            <ul id="model-list" class="chip-list"></ul>
-          </div>
           <div class="panel-lite" style="grid-column: span 2;">
             <h3>Published Laptops</h3>
             <div class="table-scroll">
@@ -193,7 +169,6 @@
                 <thead>
                   <tr>
                     <th>Listing</th>
-                    <th>Model</th>
                     <th>Price</th>
                     <th></th>
                   </tr>

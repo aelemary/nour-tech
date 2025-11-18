@@ -14,45 +14,14 @@
       "id": "comp-hp",
       "name": "HP",
       "description": "Versatile lineup covering Spectre premium ultrabooks and Omen gaming systems."
+    },
+    {
+      "id": "comp-razer-1763484020314",
+      "name": "Razer",
+      "description": ""
     }
   ],
-  "models": [
-    {
-      "id": "model-x1-carbon",
-      "companyId": "comp-lenovo",
-      "name": "ThinkPad X1 Carbon",
-      "gpu": "Intel Iris Xe",
-      "cpu": "Intel Core i7-1360P"
-    },
-    {
-      "id": "model-zenbook-14",
-      "companyId": "comp-asus",
-      "name": "ZenBook 14 OLED",
-      "gpu": "Intel Iris Xe",
-      "cpu": "Intel Core i7-1355U"
-    },
-    {
-      "id": "model-rog-strix",
-      "companyId": "comp-asus",
-      "name": "ROG Strix G16",
-      "gpu": "NVIDIA RTX 4070",
-      "cpu": "Intel Core i9-13980HX"
-    },
-    {
-      "id": "model-spectre-x360",
-      "companyId": "comp-hp",
-      "name": "Spectre x360 14",
-      "gpu": "Intel Iris Xe",
-      "cpu": "Intel Core i7-1365U"
-    },
-    {
-      "id": "model-omen-17",
-      "companyId": "comp-hp",
-      "name": "Omen 17",
-      "gpu": "NVIDIA RTX 4080",
-      "cpu": "Intel Core i9-13900HX"
-    }
-  ],
+  "models": [],
   "users": [
     {
       "id": "user-admin",
@@ -72,7 +41,6 @@
   "laptops": [
     {
       "id": "lap-x1-carbon-2024",
-      "modelId": "model-x1-carbon",
       "companyId": "comp-lenovo",
       "title": "Lenovo ThinkPad X1 Carbon Gen 11",
       "price": 56970,
@@ -91,7 +59,6 @@
     },
     {
       "id": "lap-zenbook-14-2024",
-      "modelId": "model-zenbook-14",
       "companyId": "comp-asus",
       "title": "ASUS ZenBook 14 OLED UX3402",
       "price": 41970,
@@ -110,7 +77,6 @@
     },
     {
       "id": "lap-rog-strix-2024",
-      "modelId": "model-rog-strix",
       "companyId": "comp-asus",
       "title": "ASUS ROG Strix G16 Advantage Edition",
       "price": 74970,
@@ -129,7 +95,6 @@
     },
     {
       "id": "lap-spectre-x360-2024",
-      "modelId": "model-spectre-x360",
       "companyId": "comp-hp",
       "title": "HP Spectre x360 14 2-in-1",
       "price": 46470,
@@ -148,7 +113,6 @@
     },
     {
       "id": "lap-omen-17-2024",
-      "modelId": "model-omen-17",
       "companyId": "comp-hp",
       "title": "HP Omen 17 Gaming Laptop",
       "price": 80970,
@@ -164,6 +128,21 @@
         "https://placehold.co/800x500?text=Omen+17+Side"
       ],
       "stock": 3
+    },
+    {
+      "id": "lap-omen-1763485191622",
+      "companyId": "comp-hp",
+      "title": "omen",
+      "price": 20202,
+      "currency": "EGP",
+      "gpu": "egp",
+      "cpu": "I9",
+      "ram": "32GB",
+      "storage": "1T",
+      "display": "1080P",
+      "description": "DJ",
+      "images": [],
+      "stock": 5
     }
   ],
   "orders": [
@@ -212,5 +191,17 @@
       "notes": "e",
       "createdAt": "2025-10-25T16:21:43.742Z"
     }
-  ]
+  ],
+  "contact": {
+    "salesHotline": "+20 100 000 0000",
+    "whatsapp": "+20 100 000 0001",
+    "supportEmail": "support@nourtech.example",
+    "address": "Add your office or showroom address here",
+    "availability": [
+      "Sun – Thu: 10:00 – 18:00",
+      "Fri: COD scheduling hotline",
+      "Same-day delivery in Cairo & Giza",
+      "Next-day to Alexandria, Mansoura, and Tanta"
+    ]
+  }
 }

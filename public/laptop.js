@@ -84,7 +84,6 @@ function renderLaptop(laptop) {
         ${renderSpec("Storage", laptop.storage)}
         ${renderSpec("Display", laptop.display)}
         ${renderSpec("In Stock", `${laptop.stock ?? 0} units`)}
-        ${renderSpec("Model", laptop.model?.name)}
       </div>
     </div>
     <aside class="panel">

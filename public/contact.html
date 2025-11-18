@@ -35,19 +35,19 @@
           <div class="spec-list">
             <div class="spec-item">
               <span>Sales Hotline</span>
-              <strong contenteditable="true">+20 100 000 0000</strong>
+              <strong data-contact-field="salesHotline">+20 100 000 0000</strong>
             </div>
             <div class="spec-item">
               <span>WhatsApp</span>
-              <strong contenteditable="true">+20 100 000 0001</strong>
+              <strong data-contact-field="whatsapp">+20 100 000 0001</strong>
             </div>
             <div class="spec-item">
               <span>Support Email</span>
-              <strong contenteditable="true">support@nourtech.example</strong>
+              <strong data-contact-field="supportEmail">support@nourtech.example</strong>
             </div>
             <div class="spec-item">
               <span>Showroom Address</span>
-              <strong contenteditable="true">Add your office or showroom address here</strong>
+              <strong data-contact-field="address">Add your office or showroom address here</strong>
             </div>
           </div>
           <div class="panel" style="margin: 0;">
@@ -55,13 +55,49 @@
             <p style="color: var(--text-muted);">
               Update operating hours, delivery zones, and logistics notes as your business evolves.
             </p>
-            <ul style="color: var(--text-muted); padding-inline-start: 1.25rem; line-height: 1.6;">
-              <li contenteditable="true">Sun – Thu: 10:00 – 18:00</li>
-              <li contenteditable="true">Fri: COD scheduling hotline</li>
-              <li contenteditable="true">Same-day delivery in Cairo &amp; Giza</li>
-              <li contenteditable="true">Next-day to Alexandria, Mansoura, and Tanta</li>
+            <ul id="contact-availability" class="contact-availability">
+              <li>Sun – Thu: 10:00 – 18:00</li>
+              <li>Fri: COD scheduling hotline</li>
+              <li>Same-day delivery in Cairo &amp; Giza</li>
+              <li>Next-day to Alexandria, Mansoura, and Tanta</li>
             </ul>
           </div>
+        </div>
+        <div id="contact-admin-panel" class="panel-lite contact-editor" hidden>
+          <h3>Edit Contact Details</h3>
+          <p class="field-hint">Only admins can see this form. Updates publish instantly to the contact page.</p>
+          <form id="contact-form" class="contact-form">
+            <label>
+              Sales Hotline
+              <input type="text" name="salesHotline" placeholder="+20 100 000 0000" />
+            </label>
+            <label>
+              WhatsApp
+              <input type="text" name="whatsapp" placeholder="+20 100 000 0001" />
+            </label>
+            <label>
+              Support Email
+              <input type="email" name="supportEmail" placeholder="support@nourtech.example" />
+            </label>
+            <label>
+              Showroom Address
+              <textarea
+                name="address"
+                rows="2"
+                placeholder="Add your office or showroom address here"
+              ></textarea>
+            </label>
+            <label>
+              Availability Lines (one per row)
+              <textarea
+                name="availability"
+                rows="4"
+                placeholder="Sun – Thu: 10:00 – 18:00"
+              ></textarea>
+            </label>
+            <button type="submit" class="btn btn-primary">Save Contact Info</button>
+            <div class="order-status" id="contact-status"></div>
+          </form>
         </div>
       </section>
     </main>
@@ -74,19 +110,6 @@
 
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const yearEl = document.getElementById("year");
-        if (yearEl) {
-          yearEl.textContent = new Date().getFullYear();
-        }
-        if (window.Cart) {
-          const badge = document.getElementById("cart-count");
-          if (badge) {
-            badge.textContent = window.Cart.count();
-          }
-        }
-      });
-    </script>
+    <script src="/contact.js" defer></script>
   </body>
 </html>

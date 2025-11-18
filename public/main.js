@@ -1,7 +1,5 @@
 const API_BASE = "/api";
 const state = {
-  companies: [],
-  catalog: [],
   laptops: [],
 };
 let inventoryStatusEl = null;
@@ -41,42 +39,6 @@ function showInventoryStatus(message, type = "success") {
   statusTimer = window.setTimeout(() => {
     inventoryStatusEl.innerHTML = "";
   }, 3000);
-}
-
-function uniqSorted(values) {
-  return [...new Set(values.filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, "en", { sensitivity: "base", numeric: true })
-  );
-}
-
-function populateSpecSelect(id, values) {
-  const select = document.getElementById(id);
-  if (!select) return;
-  const current = select.value;
-  const placeholder = select.querySelector("option[value='']")?.textContent || "";
-  select.innerHTML = "";
-  const defaultOption = document.createElement("option");
-  defaultOption.value = "";
-  defaultOption.textContent = placeholder;
-  select.appendChild(defaultOption);
-  uniqSorted(values).forEach((value) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    select.appendChild(option);
-  });
-  if (current && values.includes(current)) {
-    select.value = current;
-  }
-}
-
-function refreshSpecFilters() {
-  const cpus = state.catalog.map((item) => item.cpu);
-  const rams = state.catalog.map((item) => item.ram);
-  const storages = state.catalog.map((item) => item.storage);
-  populateSpecSelect("cpu", cpus);
-  populateSpecSelect("ram", rams);
-  populateSpecSelect("storage", storages);
 }
 
 function createLaptopCard(laptop) {
@@ -122,41 +84,6 @@ function createLaptopCard(laptop) {
   return card;
 }
 
-function updateStats() {
-  const laptops = state.catalog;
-  const companies = state.companies;
-  const gpuSet = new Set();
-  laptops.forEach((item) => {
-    if (item.gpu) {
-      const normalized = item.gpu.toLowerCase();
-      if (normalized.includes("nvidia")) gpuSet.add("NVIDIA");
-      else if (normalized.includes("amd")) gpuSet.add("AMD");
-      else gpuSet.add("Integrated");
-    }
-  });
-  const byId = {};
-  laptops.forEach((item) => {
-    if (item.company?.id) byId[item.company.id] = true;
-  });
-  document.getElementById("stat-brands").textContent = companies.length;
-  document.getElementById("stat-laptops").textContent = laptops.length;
-  document.getElementById("stat-gpu").textContent = gpuSet.size;
-}
-
-function populateCompanySelect() {
-  const companies = state.companies;
-  const select = document.getElementById("companyId");
-  companies
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .forEach((company) => {
-      const option = document.createElement("option");
-      option.value = company.id;
-      option.textContent = company.name;
-      select.appendChild(option);
-    });
-}
-
 function setYear() {
   const yearEl = document.getElementById("year");
   if (yearEl) {
@@ -197,31 +124,26 @@ function renderLaptops(laptops) {
 async function init() {
   setYear();
   inventoryStatusEl = document.getElementById("inventory-status");
+  updateCartCount();
   try {
-    state.companies = await fetchJSON(`${API_BASE}/companies`);
-    populateCompanySelect();
     const inventory = await loadInventory();
-    state.catalog = inventory.slice();
     renderLaptops(inventory);
-    refreshSpecFilters();
-    updateCartCount();
-    updateStats();
-
     const form = document.getElementById("filter-form");
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const formData = new FormData(form);
-      const params = Object.fromEntries(formData.entries());
-      showInventoryStatus("Loading fresh results…");
-      const inventory = await loadInventory(params);
-      renderLaptops(inventory);
-      toggleEmptyState(!!inventory.length);
-      if (!inventory.length) {
-        showInventoryStatus("No laptops matched those filters.", "error");
-      } else {
-        showInventoryStatus("Inventory updated.");
-      }
-    });
+    if (form) {
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const params = Object.fromEntries(formData.entries());
+        showInventoryStatus("Loading fresh results…");
+        const results = await loadInventory(params);
+        renderLaptops(results);
+        if (!results.length) {
+          showInventoryStatus("No laptops matched that search.", "error");
+        } else {
+          showInventoryStatus("Inventory updated.");
+        }
+      });
+    }
   } catch (error) {
     console.error(error);
     showInventoryStatus("Could not load inventory right now.", "error");

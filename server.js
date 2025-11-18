@@ -1,26 +1,42 @@
 const http = require("http");
 const { parse } = require("url");
 const fs = require("fs").promises;
+const fsSync = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
-const DATA_FILE = path.join(ROOT_DIR, "data", "data.json");
-const PORT = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(PUBLIC_DIR, "uploads");
+const PORT = process.env.PORT || 3000;
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 12;
 const sessions = new Map();
 
-async function readData() {
-  const raw = await fs.readFile(DATA_FILE, "utf8");
-  return JSON.parse(raw);
+const envPath = path.join(ROOT_DIR, ".env");
+if (fsSync.existsSync(envPath)) {
+  const envRaw = fsSync.readFileSync(envPath, "utf8");
+  envRaw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"))
+    .forEach((line) => {
+      const eqIndex = line.indexOf("=");
+      if (eqIndex === -1) return;
+      const key = line.slice(0, eqIndex).trim();
+      const value = line.slice(eqIndex + 1).trim();
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    });
 }
 
-async function writeData(data) {
-  const payload = JSON.stringify(data, null, 2);
-  await fs.writeFile(DATA_FILE, payload);
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment variables.");
+  process.exit(1);
 }
+const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
 
 async function ensureUploadDir() {
   try {
@@ -126,18 +142,6 @@ function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
-function requireAuth(req, res, session, { admin = false } = {}) {
-  if (!session) {
-    sendJSON(res, 401, { error: "Unauthorized" }, {}, req);
-    return false;
-  }
-  if (admin && session.role !== "admin") {
-    sendJSON(res, 403, { error: "Forbidden" }, {}, req);
-    return false;
-  }
-  return true;
-}
-
 async function parseBody(req) {
   return new Promise((resolve, reject) => {
     let data = "";
@@ -163,676 +167,587 @@ async function parseBody(req) {
   });
 }
 
-function buildLaptopView(laptop, models, companies) {
-  const model = models.find((item) => item.id === laptop.modelId) || null;
-  const company = companies.find((item) => item.id === laptop.companyId) || null;
+async function sb(pathname, { method = "GET", params = {}, headers = {}, body } = {}) {
+  const url = new URL(`${SUPABASE_REST_URL}/${pathname}`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.append(key, value);
+    }
+  });
+  const response = await fetch(url, {
+    method,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      ...(body ? { "Content-Type": "application/json" } : {}),
+      ...headers,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    const err = new Error(text || `Supabase request failed with status ${response.status}`);
+    err.status = response.status;
+    throw err;
+  }
+  if (response.status === 204) return null;
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  if (!text) return null;
+  if (contentType.includes("application/json")) {
+    return JSON.parse(text);
+  }
+  return text;
+}
+
+function mapCompany(record) {
+  if (!record) return null;
   return {
-    ...laptop,
-    model,
+    id: record.id,
+    name: record.name,
+    description: record.description || "",
+  };
+}
+
+function mapLaptop(record) {
+  if (!record) return null;
+  const company = record.brands ? mapCompany(record.brands) : null;
+  return {
+    id: record.id,
+    companyId: record.brand_id,
+    title: record.title,
+    price: Number(record.price) || 0,
+    currency: "EGP",
+    gpu: record.gpu || "",
+    cpu: record.cpu || "",
+    ram: record.ram || "",
+    storage: record.storage || "",
+    display: record.display || "",
+    description: record.description || "",
+    images: Array.isArray(record.images) ? record.images : record.images ? [record.images] : [],
+    stock: record.stock ?? 0,
     company,
   };
 }
 
-async function handleApi(req, res, pathname, searchParams) {
-  if (req.method === "OPTIONS") {
-    const origin = req.headers.origin;
-    const headers = {
-      "Access-Control-Allow-Methods": "GET,POST,DELETE,PATCH,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
-    if (origin) {
-      headers["Access-Control-Allow-Origin"] = origin;
-      headers["Access-Control-Allow-Credentials"] = "true";
-      headers["Vary"] = "Origin";
-    } else {
-      headers["Access-Control-Allow-Origin"] = "*";
-    }
-    res.writeHead(204, headers);
-    res.end();
+function mapUser(record) {
+  if (!record) return null;
+  return {
+    id: record.id,
+    username: record.username,
+    fullName: record.full_name || "",
+    role: record.admin ? "admin" : "customer",
+  };
+}
+
+function mapOrder(record) {
+  if (!record) return null;
+  const items = Array.isArray(record.order_items) ? record.order_items : [];
+  const firstItem = items[0];
+  const laptopData = firstItem?.laptops
+    ? mapLaptop({ ...firstItem.laptops, brands: firstItem.laptops.brands })
+    : null;
+  return {
+    id: record.id,
+    userId: record.user_id,
+    customerName: record.customer_name,
+    phone: record.phone || "",
+    email: record.email || "",
+    address: record.delivery_address,
+    paymentType: "Cash on Delivery",
+    paymentCurrency: "EGP",
+    status: record.status,
+    quantity: firstItem?.quantity || 1,
+    notes: record.notes || "",
+    createdAt: record.created_at,
+    laptop: laptopData,
+  };
+}
+
+function filterLaptops(laptops, filters) {
+  return laptops.filter((laptop) => {
+    const search = filters.search?.toLowerCase() || "";
+    const matchesSearch =
+      !search ||
+      laptop.title.toLowerCase().includes(search) ||
+      (laptop.description || "").toLowerCase().includes(search) ||
+      (laptop.cpu || "").toLowerCase().includes(search) ||
+      (laptop.ram || "").toLowerCase().includes(search) ||
+      (laptop.storage || "").toLowerCase().includes(search);
+    const matchesCompany = !filters.companyId || laptop.companyId === filters.companyId;
+    const matchesGpu =
+      !filters.gpu || (laptop.gpu || "").toLowerCase().includes(filters.gpu.toLowerCase());
+    const matchesIds =
+      !filters.ids || (Array.isArray(filters.ids) && filters.ids.includes(laptop.id));
+    const matchesMin = !filters.minPrice || laptop.price >= Number(filters.minPrice);
+    const matchesMax = !filters.maxPrice || laptop.price <= Number(filters.maxPrice);
+    return matchesSearch && matchesCompany && matchesGpu && matchesIds && matchesMin && matchesMax;
+  });
+}
+
+async function handleAuthMe(session, reply) {
+  if (!session) {
+    reply(200, { authenticated: false });
     return;
   }
-
-  const segments = pathname.split("/").filter(Boolean);
-  const resource = segments[1] ? decodeURIComponent(segments[1]) : "";
-  const slug = segments[2] ? decodeURIComponent(segments[2]) : null;
-  const extra = segments[3] ? decodeURIComponent(segments[3]) : null;
-  const action = slug ? slug.toLowerCase() : "";
-
-  const cookies = parseCookies(req.headers.cookie || "");
-  const rawSessionToken = cookies.sessionId ? decodeURIComponent(cookies.sessionId) : null;
-  let session = null;
-  if (rawSessionToken && sessions.has(rawSessionToken)) {
-    const storedSession = sessions.get(rawSessionToken);
-    if (storedSession.expiresAt && storedSession.expiresAt < Date.now()) {
-      sessions.delete(rawSessionToken);
-    } else {
-      storedSession.expiresAt = Date.now() + SESSION_MAX_AGE_MS;
-      session = { ...storedSession, token: rawSessionToken };
-      sessions.set(rawSessionToken, storedSession);
-    }
+  const data = await sb("users", {
+    params: { select: "id,username,full_name,admin", id: `eq.${session.userId}` },
+  });
+  const record = data?.[0];
+  if (!record) {
+    destroySession(session.token);
+    reply(200, { authenticated: false });
+    return;
   }
+  const user = mapUser(record);
+  reply(200, { authenticated: true, user });
+}
+
+async function fetchContact() {
+  const data = await sb("contact", { params: { select: "*", id: "eq.1" } });
+  return data?.[0] || {
+    sales_hotline: "+20 100 000 0000",
+    whatsapp: "+20 100 000 0001",
+    support_email: "support@nourtech.example",
+    address: "Add your office or showroom address here",
+    availability: [],
+  };
+}
+
+function requireAuth(req, res, session, { admin = false } = {}) {
+  if (!session) {
+    sendJSON(res, 401, { error: "Unauthorized" }, {}, req);
+    return false;
+  }
+  if (admin && session.role !== "admin") {
+    sendJSON(res, 403, { error: "Forbidden" }, {}, req);
+    return false;
+  }
+  return true;
+}
+
+async function handleApi(req, res, pathname, searchParams) {
+  const method = req.method;
+  const segments = pathname.split("/").filter(Boolean);
+  const resource = segments[1] || "";
+  const slug = segments[2] || "";
+  const cookies = parseCookies(req.headers.cookie || "");
+  const sessionId = cookies.sessionId;
+  const session = sessionId && sessions.has(sessionId) ? { ...sessions.get(sessionId), token: sessionId } : null;
+
+  const reply = (status, payload, headers = {}) => sendJSON(res, status, payload, headers, req);
 
   try {
-    if (segments[0] === "api") {
-      const reply = (status, payload, headers) => sendJSON(res, status, payload, headers, req);
-      switch (resource) {
-        case "auth":
-          if (action === "signup" && req.method === "POST") {
-            const body = await parseBody(req);
-            if (!body || !body.username || !body.password) {
-              reply(400, { error: "Missing username or password" });
-              return;
-            }
-            const usernameRaw = String(body.username).trim();
-            const password = String(body.password);
-            if (password.length < 6) {
-              reply(400, { error: "Password must be at least 6 characters long" });
-              return;
-            }
-            if (!usernameRaw.match(/^[a-z0-9_.-]+$/i)) {
-              reply(400, { error: "Username can only contain letters, numbers, dots, underscores, and dashes" });
-              return;
-            }
-            const username = usernameRaw.toLowerCase();
-            const data = await readData();
-            if (!Array.isArray(data.users)) {
-              data.users = [];
-            }
-            const exists = data.users.some((user) => user.username.toLowerCase() === username);
-            if (exists) {
-              reply(409, { error: "Username is already taken" });
-              return;
-            }
-            const id = `user-${Date.now()}`;
-            const fullName =
-              typeof body.fullName === "string" && body.fullName.trim()
-                ? body.fullName.trim()
-                : usernameRaw;
-            const userRecord = {
-              id,
-              username: usernameRaw,
-              passwordHash: hashPassword(password),
-              role: "customer",
-              fullName,
-            };
-            data.users.push(userRecord);
-            await writeData(data);
-            const token = createSession(userRecord);
-            const cookie = serializeCookie("sessionId", token, {
-              path: "/",
-              httpOnly: true,
-              sameSite: "Lax",
-              maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000),
-            });
-            reply(
-              201,
-              {
-                id: userRecord.id,
-                username: userRecord.username,
-                fullName: userRecord.fullName,
-                role: userRecord.role,
-              },
-              { "Set-Cookie": cookie }
-            );
+    if (method === "OPTIONS") {
+      reply(204, {});
+      return;
+    }
+    switch (resource) {
+      case "auth": {
+        const action = slug || "";
+        if (action === "signup" && method === "POST") {
+          const body = await parseBody(req);
+          if (!body || !body.username || !body.password) {
+            reply(400, { error: "Missing username or password" });
             return;
           }
-          if (action === "login" && req.method === "POST") {
-            const body = await parseBody(req);
-            if (!body || !body.username || !body.password) {
-              reply(400, { error: "Missing username or password" });
-              return;
-            }
-            const username = String(body.username).trim().toLowerCase();
-            const data = await readData();
-            const users = Array.isArray(data.users) ? data.users : [];
-            const user = users.find((item) => item.username.toLowerCase() === username);
-            const password = typeof body.password === "string" ? body.password : "";
-            if (!user) {
-              reply(401, { error: "Invalid username or password" });
-              return;
-            }
-            const hash = hashPassword(password);
-            if (hash !== user.passwordHash) {
-              reply(401, { error: "Invalid username or password" });
-              return;
-            }
-            const token = createSession(user);
-            const cookie = serializeCookie("sessionId", token, {
-              path: "/",
-              httpOnly: true,
-              sameSite: "Lax",
-              maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000),
-            });
-            reply(
-              200,
-              {
-                id: user.id,
-                username: user.username,
-                fullName: user.fullName || "",
-                role: user.role,
-              },
-              { "Set-Cookie": cookie }
-            );
+          const username = String(body.username).trim().toLowerCase();
+          const existing = await sb("users", {
+            params: { select: "id", username: `eq.${username}` },
+          });
+          if (existing.length) {
+            reply(409, { error: "Username already exists" });
             return;
           }
-          if (action === "logout" && req.method === "POST") {
-            const cookie = serializeCookie("sessionId", "", {
-              path: "/",
-              httpOnly: true,
-              sameSite: "Lax",
-              maxAge: 0,
-            });
-            if (session?.token) {
-              destroySession(session.token);
-            }
-            reply(200, { success: true }, { "Set-Cookie": cookie });
+          const payload = {
+            username,
+            is_registered: true,
+            admin: false,
+            hashed_password: hashPassword(body.password),
+            full_name: body.fullName || "",
+          };
+          const created = await sb("users", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: payload,
+          });
+          const record = created?.[0];
+          const user = mapUser(record);
+          const token = createSession(user);
+          const cookie = serializeCookie("sessionId", token, {
+            path: "/",
+            httpOnly: true,
+            sameSite: "Lax",
+            maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000),
+          });
+          reply(201, user, { "Set-Cookie": cookie });
+          return;
+        }
+        if (action === "login" && method === "POST") {
+          const body = await parseBody(req);
+          if (!body || !body.username || !body.password) {
+            reply(400, { error: "Missing username or password" });
             return;
           }
-          if (action === "me" && req.method === "GET") {
-            if (!session) {
-              reply(200, { authenticated: false });
-              return;
-            }
-            const data = await readData();
-            const users = Array.isArray(data.users) ? data.users : [];
-            const user = users.find((item) => item.id === session.userId);
-            if (!user) {
-              if (session.token) destroySession(session.token);
-              reply(200, { authenticated: false });
-              return;
-            }
-            reply(200, {
-              authenticated: true,
-              user: {
-                id: user.id,
-                username: user.username,
-                fullName: user.fullName || "",
-                role: user.role,
-              },
-            });
+          const username = String(body.username).trim().toLowerCase();
+          const users = await sb("users", {
+            params: { select: "id,username,full_name,admin,hashed_password", username: `eq.${username}` },
+          });
+          const record = users?.[0];
+          if (!record || hashPassword(body.password) !== record.hashed_password) {
+            reply(401, { error: "Invalid username or password" });
             return;
           }
-          break;
-        case "companies":
-          if (req.method === "GET") {
-            const data = await readData();
-            reply(200, data.companies);
-            return;
-          }
-          if (req.method === "POST") {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const body = await parseBody(req);
-            if (!body || !body.name) {
-              reply(400, { error: "Missing company name" });
-              return;
-            }
-            const data = await readData();
-            const id = `comp-${body.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
-            const company = {
-              id,
-              name: body.name,
-              description: body.description || "",
-            };
-            data.companies.push(company);
-            await writeData(data);
-            reply(201, company);
-            return;
-          }
-          if (req.method === "DELETE" && slug) {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const data = await readData();
-            if (!Array.isArray(data.companies)) data.companies = [];
-            if (!Array.isArray(data.models)) data.models = [];
-            if (!Array.isArray(data.laptops)) data.laptops = [];
-            const companyIndex = data.companies.findIndex((company) => company.id === slug);
-            if (companyIndex === -1) {
-              reply(404, { error: "Company not found" });
-              return;
-            }
-            const companyId = data.companies[companyIndex].id;
-            const removedModels = data.models.filter((model) => model.companyId === companyId);
-            const removedModelIds = new Set(removedModels.map((model) => model.id));
-            const removedLaptops = data.laptops.filter(
-              (laptop) => laptop.companyId === companyId || removedModelIds.has(laptop.modelId)
-            );
-            const removedLaptopIds = new Set(removedLaptops.map((laptop) => laptop.id));
-            data.companies.splice(companyIndex, 1);
-            data.models = data.models.filter((model) => model.companyId !== companyId);
-            data.laptops = data.laptops.filter(
-              (laptop) => laptop.companyId !== companyId && !removedModelIds.has(laptop.modelId)
-            );
-            await writeData(data);
-            reply(200, {
-              success: true,
-              removed: {
-                companies: 1,
-                models: removedModelIds.size,
-                laptops: removedLaptopIds.size,
-              },
-            });
-            return;
-          }
-          break;
-        case "models":
-          if (req.method === "GET") {
-            const data = await readData();
-            const companyId = searchParams.get("companyId");
-            const models = companyId
-              ? data.models.filter((model) => model.companyId === companyId)
-              : data.models;
-            reply(200, models);
-            return;
-          }
-          if (req.method === "POST") {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const body = await parseBody(req);
-            if (!body || !body.companyId || !body.name) {
-              reply(400, { error: "Missing companyId or name" });
-              return;
-            }
-            const data = await readData();
-            const companyExists = data.companies.some((c) => c.id === body.companyId);
-            if (!companyExists) {
-              reply(404, { error: "Company not found" });
-              return;
-            }
-            const id = `model-${body.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
-            const model = {
-              id,
-              companyId: body.companyId,
-              name: body.name,
-              gpu: body.gpu || "",
-              cpu: body.cpu || "",
-            };
-            data.models.push(model);
-            await writeData(data);
-            reply(201, model);
-            return;
-          }
-          if (req.method === "DELETE" && slug) {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const data = await readData();
-            if (!Array.isArray(data.models)) data.models = [];
-            if (!Array.isArray(data.laptops)) data.laptops = [];
-            const modelIndex = data.models.findIndex((model) => model.id === slug);
-            if (modelIndex === -1) {
-              reply(404, { error: "Model not found" });
-              return;
-            }
-            const modelId = data.models[modelIndex].id;
-            const removedLaptops = data.laptops.filter((laptop) => laptop.modelId === modelId);
-            const removedLaptopIds = new Set(removedLaptops.map((laptop) => laptop.id));
-            data.models.splice(modelIndex, 1);
-            data.laptops = data.laptops.filter((laptop) => laptop.modelId !== modelId);
-            await writeData(data);
-            reply(200, {
-              success: true,
-              removed: {
-                models: 1,
-                laptops: removedLaptopIds.size,
-              },
-            });
-            return;
-          }
-          break;
-        case "laptops":
-          if (req.method === "GET" && slug) {
-            const data = await readData();
-            const laptop = data.laptops.find((item) => item.id === slug);
-            if (!laptop) {
-              reply(404, { error: "Laptop not found" });
-              return;
-            }
-            reply(200, buildLaptopView(laptop, data.models, data.companies));
-            return;
-          }
-          if (req.method === "GET") {
-            const data = await readData();
-            const search = (searchParams.get("search") || "").toLowerCase();
-            const companyId = searchParams.get("companyId");
-            const gpu = searchParams.get("gpu");
-            const minPrice = searchParams.get("minPrice");
-            const maxPrice = searchParams.get("maxPrice");
-            const cpuFilter = searchParams.get("cpu");
-            const ramFilter = searchParams.get("ram");
-            const storageFilter = searchParams.get("storage");
-            const idsParam = searchParams.get("ids");
-            const idFilter = idsParam
-              ? idsParam
-                  .split(",")
-                  .map((id) => id.trim())
-                  .filter(Boolean)
-              : null;
-
-            const laptops = data.laptops
-              .filter((laptop) => {
-                if (idFilter && !idFilter.includes(laptop.id)) {
-                  return false;
-                }
-                const matchesSearch =
-                  !search ||
-                  laptop.title.toLowerCase().includes(search) ||
-                  laptop.description.toLowerCase().includes(search) ||
-                  (laptop.cpu || "").toLowerCase().includes(search) ||
-                  (laptop.ram || "").toLowerCase().includes(search) ||
-                  (laptop.storage || "").toLowerCase().includes(search);
-                const matchesCompany = !companyId || laptop.companyId === companyId;
-                const matchesGpu = !gpu || laptop.gpu.toLowerCase().includes(gpu.toLowerCase());
-                const matchesMin = !minPrice || laptop.price >= Number(minPrice);
-                const matchesMax = !maxPrice || laptop.price <= Number(maxPrice);
-                const matchesCpu =
-                  !cpuFilter || (laptop.cpu || "").toLowerCase() === cpuFilter.toLowerCase();
-                const matchesRam =
-                  !ramFilter || (laptop.ram || "").toLowerCase() === ramFilter.toLowerCase();
-                const matchesStorage =
-                  !storageFilter ||
-                  (laptop.storage || "").toLowerCase() === storageFilter.toLowerCase();
-                return (
-                  matchesSearch &&
-                  matchesCompany &&
-                  matchesGpu &&
-                  matchesMin &&
-                  matchesMax &&
-                  matchesCpu &&
-                  matchesRam &&
-                  matchesStorage
-                );
-              })
-              .map((laptop) => buildLaptopView(laptop, data.models, data.companies));
-
-            reply(200, laptops);
-            return;
-          }
-          if (req.method === "POST") {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const body = await parseBody(req);
-            if (!body || !body.modelId || !body.title || !body.price) {
-              reply(400, { error: "Missing modelId, title, or price" });
-              return;
-            }
-            const data = await readData();
-            const model = data.models.find((item) => item.id === body.modelId);
-            if (!model) {
-              reply(404, { error: "Model not found" });
-              return;
-            }
-            const id = `lap-${body.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
-            const laptop = {
-              id,
-              modelId: body.modelId,
-              companyId: model.companyId,
-              title: body.title,
-              price: Number(body.price),
-              currency: body.currency || "EGP",
-              gpu: body.gpu || model.gpu || "",
-              cpu: body.cpu || model.cpu || "",
-              ram: body.ram || "",
-              storage: body.storage || "",
-              display: body.display || "",
-              description: body.description || "",
-              images: Array.isArray(body.images)
-                ? body.images.filter(Boolean)
-                : typeof body.images === "string" && body.images
-                ? body.images.split(",").map((url) => url.trim()).filter(Boolean)
-                : [],
-              stock: body.stock != null ? Number(body.stock) : 0,
-            };
-            data.laptops.push(laptop);
-            await writeData(data);
-            reply(201, buildLaptopView(laptop, data.models, data.companies));
-            return;
-          }
-          if (req.method === "DELETE" && slug) {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const data = await readData();
-            if (!Array.isArray(data.laptops)) data.laptops = [];
-            const index = data.laptops.findIndex((laptop) => laptop.id === slug);
-            if (index === -1) {
-              reply(404, { error: "Laptop not found" });
-              return;
-            }
-            const [removed] = data.laptops.splice(index, 1);
-            await writeData(data);
-            reply(200, { success: true, laptop: removed });
-            return;
-          }
-          break;
-        case "orders":
-          if (req.method === "GET") {
-            if (!requireAuth(req, res, session)) {
-              return;
-            }
-            const data = await readData();
-            const status = searchParams.get("status");
-            const relevantOrders =
-              session.role === "admin"
-                ? data.orders
-                : data.orders.filter((order) => order.userId === session.userId);
-            const orders = relevantOrders
-              .filter((order) => (!status ? true : order.status === status))
-              .map((order) => {
-                const laptop = data.laptops.find((item) => item.id === order.laptopId) || null;
-                return {
-                  ...order,
-                  laptop,
-                };
-              });
-            reply(200, orders);
-            return;
-          }
-          if (req.method === "POST") {
-            if (!requireAuth(req, res, session)) {
-              return;
-            }
-            const body = await parseBody(req);
-            if (!body || !body.laptopId || !body.phone || !body.address) {
-              reply(400, {
-                error: "Missing laptopId, phone, or address",
-              });
-              return;
-            }
-            const data = await readData();
-            const laptop = data.laptops.find((item) => item.id === body.laptopId);
-            if (!laptop) {
-              reply(404, { error: "Laptop not found" });
-              return;
-            }
-            const quantity =
-              body.quantity != null && Number.isFinite(Number(body.quantity))
-                ? Math.max(1, Number(body.quantity))
-                : 1;
-            const paymentType =
-              typeof body.paymentType === "string" && body.paymentType.trim()
-                ? body.paymentType.trim()
-                : "Cash on Delivery";
-            const notes =
-              typeof body.notes === "string" && body.notes.trim() ? body.notes.trim() : "";
-            const id = `order-${Date.now()}`;
-            const order = {
-              id,
-              laptopId: body.laptopId,
-              userId: session.userId,
-              customerName: body.customerName || session.fullName || session.username,
-              phone: body.phone,
-              email: body.email || "",
-              address: body.address,
-              paymentType,
-              paymentCurrency: laptop.currency || "EGP",
-              status: "pending",
-              quantity,
-              notes,
-              createdAt: new Date().toISOString(),
-            };
-            data.orders.push(order);
-            await writeData(data);
-            reply(201, { ...order, laptop });
-            return;
-          }
-          if (req.method === "PATCH" && slug) {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const body = await parseBody(req);
-            if (!body || !body.status) {
-              reply(400, { error: "Missing status update" });
-              return;
-            }
-            const allowedStatuses = new Set(["pending", "confirmed", "completed", "cancelled"]);
-            const status = String(body.status).toLowerCase();
-            if (!allowedStatuses.has(status)) {
-              reply(400, { error: "Unsupported status value" });
-              return;
-            }
-            const data = await readData();
-            const order = data.orders.find((item) => item.id === slug);
-            if (!order) {
-              reply(404, { error: "Order not found" });
-              return;
-            }
-            order.status = status;
-            if (typeof body.notes === "string") {
-              order.notes = body.notes.trim();
-            }
-            if (typeof body.paymentType === "string" && body.paymentType.trim()) {
-              order.paymentType = body.paymentType.trim();
-            }
-            await writeData(data);
-            const laptop = data.laptops.find((item) => item.id === order.laptopId) || null;
-            reply(200, { ...order, laptop });
-            return;
-          }
-          break;
-        case "users":
-          if (req.method === "GET") {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const data = await readData();
-            const users = (data.users || []).map((user) => ({
-              id: user.id,
-              username: user.username,
-              role: user.role,
-              fullName: user.fullName || "",
-              isCurrent: session.userId === user.id,
-              orders: (data.orders || []).filter((order) => order.userId === user.id).length,
-            }));
-            reply(200, users);
-            return;
-          }
-          if (req.method === "DELETE" && slug) {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const data = await readData();
-            if (!Array.isArray(data.users)) {
-              reply(404, { error: "User not found" });
-              return;
-            }
-            const index = data.users.findIndex((user) => user.id === slug);
-            if (index === -1) {
-              reply(404, { error: "User not found" });
-              return;
-            }
-            const user = data.users[index];
-            if (user.role === "admin") {
-              reply(400, { error: "Admin accounts cannot be removed from the dashboard." });
-              return;
-            }
-            data.users.splice(index, 1);
-            if (Array.isArray(data.orders)) {
-              data.orders = data.orders.filter((order) => order.userId !== slug);
-            }
-            await writeData(data);
-            destroySessionsForUser(slug);
-            reply(200, { success: true });
-            return;
-          }
-          break;
-        case "uploads":
-          if (req.method === "POST") {
-            if (!requireAuth(req, res, session, { admin: true })) {
-              return;
-            }
-            const body = await parseBody(req);
-            if (!body || !body.data) {
-              reply(400, { error: "Missing image data" });
-              return;
-            }
-
-            await ensureUploadDir();
-
-            let mime = "";
-            let base64Payload = "";
-            if (body.data.startsWith("data:")) {
-              const match = body.data.match(/^data:([^;]+);base64,(.+)$/);
-              if (!match) {
-                reply(400, { error: "Invalid data URI format" });
-                return;
-              }
-              mime = match[1];
-              base64Payload = match[2];
-            } else {
-              base64Payload = body.data;
-            }
-
-            if (!base64Payload) {
-              reply(400, { error: "Empty image payload" });
-              return;
-            }
-
-            let extension = "";
-            if (body.filename && body.filename.includes(".")) {
-              extension = path.extname(body.filename).toLowerCase();
-            } else if (mime) {
-              const subtype = mime.split("/")[1];
-              extension = subtype ? `.${subtype.replace(/[^\w]/g, "")}` : "";
-            }
-            if (!extension) {
-              extension = ".png";
-            }
-            const allowedExtensions = new Set([".png", ".jpg", ".jpeg", ".webp"]);
-            if (!allowedExtensions.has(extension)) {
-              reply(400, { error: "Unsupported image type" });
-              return;
-            }
-            const safeBase = sanitizeFilename(body.filename || `upload${extension}`);
-            const withoutExt = safeBase.endsWith(extension)
-              ? safeBase.slice(0, -extension.length)
-              : safeBase;
-            const finalName = `${Date.now()}-${withoutExt || "upload"}${extension}`;
-            const filePath = path.join(UPLOAD_DIR, finalName);
-            try {
-              await fs.writeFile(filePath, Buffer.from(base64Payload, "base64"));
-            } catch (error) {
-              reply(500, { error: "Failed to write image", details: error.message });
-              return;
-            }
-            reply(201, { url: `/uploads/${finalName}` });
-            return;
-          }
-          break;
-        default:
-          break;
+          const user = mapUser(record);
+          const token = createSession(user);
+          const cookie = serializeCookie("sessionId", token, {
+            path: "/",
+            httpOnly: true,
+            sameSite: "Lax",
+            maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000),
+          });
+          reply(200, user, { "Set-Cookie": cookie });
+          return;
+        }
+        if (action === "logout" && method === "POST") {
+          const cookie = serializeCookie("sessionId", "", {
+            path: "/",
+            httpOnly: true,
+            sameSite: "Lax",
+            maxAge: 0,
+          });
+          if (session?.token) destroySession(session.token);
+          reply(200, { success: true }, { "Set-Cookie": cookie });
+          return;
+        }
+        if (action === "me" && method === "GET") {
+          await handleAuthMe(session, reply);
+          return;
+        }
+        break;
       }
+      case "companies": {
+        if (method === "GET") {
+          const brands = await sb("brands", { params: { select: "*", order: "name.asc" } });
+          reply(200, brands.map(mapCompany));
+          return;
+        }
+        if (method === "POST") {
+          if (!requireAuth(req, res, session, { admin: true })) return;
+          const body = await parseBody(req);
+          if (!body || !body.name) {
+            reply(400, { error: "Missing company name" });
+            return;
+          }
+          const created = await sb("brands", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: { name: body.name, description: body.description || "" },
+          });
+          reply(201, mapCompany(created?.[0]));
+          return;
+        }
+        if (method === "DELETE" && slug) {
+          if (!requireAuth(req, res, session, { admin: true })) return;
+          await sb("brands", { method: "DELETE", params: { id: `eq.${slug}` } });
+          reply(200, { success: true });
+          return;
+        }
+        break;
+      }
+      case "laptops": {
+        if (method === "GET" && slug) {
+          const laptops = await sb("laptops", {
+            params: { select: "*,brands(*)", id: `eq.${slug}` },
+          });
+          const record = laptops?.[0];
+          if (!record) {
+            reply(404, { error: "Laptop not found" });
+            return;
+          }
+          reply(200, mapLaptop(record));
+          return;
+        }
+        if (method === "GET") {
+          const laptops = await sb("laptops", {
+            params: { select: "*,brands(*)", order: "title.asc" },
+          });
+          const mapped = laptops.map(mapLaptop);
+          const idsRaw = (searchParams.get("ids") || "")
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean);
+          const results = filterLaptops(mapped, {
+            search: searchParams.get("search") || "",
+            companyId: searchParams.get("companyId") || "",
+            gpu: searchParams.get("gpu") || "",
+            ids: idsRaw.length ? idsRaw : null,
+            minPrice: searchParams.get("minPrice"),
+            maxPrice: searchParams.get("maxPrice"),
+          });
+          reply(200, results);
+          return;
+        }
+        if (method === "POST") {
+          if (!requireAuth(req, res, session, { admin: true })) return;
+          const body = await parseBody(req);
+          if (!body || !body.companyId || !body.title || body.price == null) {
+            reply(400, { error: "Missing companyId, title, or price" });
+            return;
+          }
+          const brands = await sb("brands", { params: { select: "id", id: `eq.${body.companyId}` } });
+          if (!brands.length) {
+            reply(404, { error: "Brand not found" });
+            return;
+          }
+          const payload = {
+            brand_id: body.companyId,
+            title: body.title,
+            price: Number(body.price),
+            gpu: body.gpu || "",
+            cpu: body.cpu || "",
+            ram: body.ram || "",
+            storage: body.storage || "",
+            display: body.display || "",
+            description: body.description || "",
+            images: Array.isArray(body.images)
+              ? body.images
+              : typeof body.images === "string" && body.images
+              ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
+              : [],
+            stock: body.stock != null ? Number(body.stock) : 0,
+          };
+          const created = await sb("laptops", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: payload,
+          });
+          const record = created?.[0];
+          const hydrated = await sb("laptops", {
+            params: { select: "*,brands(*)", id: `eq.${record.id}` },
+          });
+          reply(201, mapLaptop(hydrated?.[0]));
+          return;
+        }
+        if (method === "DELETE" && slug) {
+          if (!requireAuth(req, res, session, { admin: true })) return;
+          await sb("laptops", { method: "DELETE", params: { id: `eq.${slug}` } });
+          reply(200, { success: true });
+          return;
+        }
+        break;
+      }
+      case "orders": {
+        if (method === "GET") {
+          if (!requireAuth(req, res, session)) return;
+          const params = {
+            select: "*,order_items(*,laptops(*,brands(*)))",
+            order: "created_at.desc",
+          };
+          if (session.role !== "admin") {
+            params.user_id = `eq.${session.userId}`;
+          }
+          const statusFilter = searchParams.get("status");
+          if (statusFilter) {
+            params.status = `eq.${statusFilter}`;
+          }
+          const records = await sb("orders", { params });
+          reply(200, records.map(mapOrder));
+          return;
+        }
+        if (method === "POST") {
+          if (!requireAuth(req, res, session)) return;
+          const body = await parseBody(req);
+          if (!body || !body.laptopId || !body.phone || !body.address) {
+            reply(400, { error: "Missing laptopId, phone, or address" });
+            return;
+          }
+          const laptops = await sb("laptops", {
+            params: { select: "id", id: `eq.${body.laptopId}` },
+          });
+          if (!laptops.length) {
+            reply(404, { error: "Laptop not found" });
+            return;
+          }
+          const orderPayload = {
+            user_id: session.userId,
+            customer_name: body.customerName || session.fullName || session.username,
+            delivery_address: body.address,
+            email: body.email || "",
+            phone: body.phone,
+            notes: body.notes || "",
+          };
+          const createdOrder = await sb("orders", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: orderPayload,
+          });
+          const orderRecord = createdOrder?.[0];
+          await sb("order_items", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: {
+              order_id: orderRecord.id,
+              laptop_id: body.laptopId,
+              quantity: body.quantity != null ? Math.max(1, Number(body.quantity)) : 1,
+            },
+          });
+          const hydrated = await sb("orders", {
+            params: {
+              select: "*,order_items(*,laptops(*,brands(*)))",
+              id: `eq.${orderRecord.id}`,
+            },
+          });
+          reply(201, mapOrder(hydrated?.[0]));
+          return;
+        }
+        if (method === "PATCH" && slug) {
+          if (!requireAuth(req, res, session, { admin: true })) return;
+          const body = await parseBody(req);
+          if (!body || !body.status) {
+            reply(400, { error: "Missing status update" });
+            return;
+          }
+          await sb("orders", {
+            method: "PATCH",
+            params: { id: `eq.${slug}` },
+            headers: { Prefer: "return=representation" },
+            body: { status: body.status },
+          });
+          const hydrated = await sb("orders", {
+            params: { select: "*,order_items(*,laptops(*,brands(*)))", id: `eq.${slug}` },
+          });
+          if (!hydrated.length) {
+            reply(404, { error: "Order not found" });
+            return;
+          }
+          reply(200, mapOrder(hydrated?.[0]));
+          return;
+        }
+        break;
+      }
+      case "users": {
+        if (!requireAuth(req, res, session, { admin: true })) return;
+        if (method === "GET") {
+          const users = await sb("users", {
+            params: { select: "id,username,full_name,admin" },
+          });
+          reply(200, users.map(mapUser));
+          return;
+        }
+        if (method === "DELETE" && slug) {
+          await sb("users", { method: "DELETE", params: { id: `eq.${slug}` } });
+          destroySessionsForUser(slug);
+          reply(200, { success: true });
+          return;
+        }
+        break;
+      }
+      case "contact": {
+        if (method === "GET") {
+          const record = await fetchContact();
+          reply(200, {
+            salesHotline: record.sales_hotline || "",
+            whatsapp: record.whatsapp || "",
+            supportEmail: record.support_email || "",
+            address: record.address || "",
+            availability: record.availability || [],
+          });
+          return;
+        }
+        if (method === "PUT") {
+          if (!requireAuth(req, res, session, { admin: true })) return;
+          const body = await parseBody(req);
+          const payload = {
+            sales_hotline: body.salesHotline || "",
+            whatsapp: body.whatsapp || "",
+            support_email: body.supportEmail || "",
+            address: body.address || "",
+            availability: Array.isArray(body.availability)
+              ? body.availability
+              : typeof body.availability === "string"
+              ? body.availability.split("\n").map((line) => line.trim()).filter(Boolean)
+              : [],
+          };
+          await sb("contact", {
+            method: "PATCH",
+            params: { id: "eq.1" },
+            headers: { Prefer: "return=representation" },
+            body: payload,
+          });
+          const updated = await fetchContact();
+          reply(200, {
+            salesHotline: updated.sales_hotline || "",
+            whatsapp: updated.whatsapp || "",
+            supportEmail: updated.support_email || "",
+            address: updated.address || "",
+            availability: updated.availability || [],
+          });
+          return;
+        }
+        break;
+      }
+      case "uploads": {
+        if (!requireAuth(req, res, session, { admin: true })) return;
+        if (method === "POST") {
+          const body = await parseBody(req);
+          if (!body || !body.data) {
+            reply(400, { error: "Missing base64 data" });
+            return;
+          }
+          await ensureUploadDir();
+          let mime = "";
+          let base64Payload = "";
+          if (body.data.startsWith("data:")) {
+            const match = body.data.match(/^data:([^;]+);base64,(.+)$/);
+            if (!match) {
+              reply(400, { error: "Invalid data URI format" });
+              return;
+            }
+            mime = match[1];
+            base64Payload = match[2];
+          } else {
+            base64Payload = body.data;
+          }
+          if (!base64Payload) {
+            reply(400, { error: "Empty image payload" });
+            return;
+          }
+          let extension = "";
+          if (body.filename && body.filename.includes(".")) {
+            extension = path.extname(body.filename).toLowerCase();
+          } else if (mime) {
+            const subtype = mime.split("/")[1];
+            extension = subtype ? `.${subtype.replace(/[^\w]/g, "")}` : "";
+          }
+          if (!extension) extension = ".png";
+          const allowed = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+          if (!allowed.has(extension)) {
+            reply(400, { error: "Unsupported image type" });
+            return;
+          }
+          const safeBase = sanitizeFilename(body.filename || `upload${extension}`);
+          const baseName = safeBase.endsWith(extension)
+            ? safeBase.slice(0, -extension.length)
+            : safeBase;
+          const finalName = `${Date.now()}-${baseName || "upload"}${extension}`;
+          const filePath = path.join(UPLOAD_DIR, finalName);
+          await fs.writeFile(filePath, Buffer.from(base64Payload, "base64"));
+          reply(201, { url: `/uploads/${finalName}` });
+          return;
+        }
+        break;
+      }
+      default:
+        break;
     }
   } catch (error) {
-    sendJSON(res, 500, { error: "Internal Server Error", details: error.message }, {}, req);
+    const status = error.status && Number.isInteger(error.status) ? error.status : 500;
+    reply(status, { error: error.message || "Internal Server Error" });
     return;
   }
 
-  sendJSON(res, 404, { error: "Not Found" }, {}, req);
+  reply(404, { error: "Not Found" });
 }
 
 const CONTENT_TYPES = {
@@ -862,7 +777,6 @@ async function serveStatic(res, pathname) {
       throw error;
     }
   }
-
   const ext = path.extname(filePath).toLowerCase();
   const contentType = CONTENT_TYPES[ext] || "application/octet-stream";
   const content = await fs.readFile(filePath);
@@ -876,15 +790,13 @@ async function serveStatic(res, pathname) {
 const server = http.createServer(async (req, res) => {
   const { pathname, query } = parse(req.url);
   const searchParams = new URLSearchParams(query || "");
-
   if (pathname.startsWith("/api/")) {
     await handleApi(req, res, pathname, searchParams);
     return;
   }
-
   try {
-    const sanitizedPath = pathname === "/" ? "/" : path.normalize(pathname).replace(/^(\.\.[/\\])+/, "");
-    await serveStatic(res, sanitizedPath);
+    const normalized = pathname === "/" ? "/" : path.normalize(pathname).replace(/^(\.\.[/\\])+/, "");
+    await serveStatic(res, normalized);
   } catch (error) {
     if (error.code === "ENOENT") {
       sendText(res, 404, "Not Found");
