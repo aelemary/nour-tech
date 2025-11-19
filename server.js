@@ -7,7 +7,6 @@ const crypto = require("crypto");
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
-const UPLOAD_DIR = path.join(PUBLIC_DIR, "uploads");
 const PORT = process.env.PORT || 3000;
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 12;
 const sessions = new Map();
@@ -38,14 +37,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   process.exit(1);
 }
 const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
-
-async function ensureUploadDir() {
-  try {
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  } catch (error) {
-    if (error.code !== "EEXIST") throw error;
-  }
-}
 
 function sanitizeFilename(name) {
   return name
@@ -202,18 +193,14 @@ async function sb(pathname, { method = "GET", params = {}, headers = {}, body } 
 }
 
 async function storeImage(finalName, base64Payload, mime) {
-  const buffer = Buffer.from(base64Payload, "base64");
   if (!SUPABASE_STORAGE_BUCKET) {
-    await ensureUploadDir();
-    const filePath = path.join(UPLOAD_DIR, finalName);
-    await fs.writeFile(filePath, buffer);
-    return `/uploads/${finalName}`;
+    throw new Error("SUPABASE_STORAGE_BUCKET is not configured.");
   }
-  const uploadUrl = new URL(
-    `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_STORAGE_BUCKET)}`
-  );
-  uploadUrl.searchParams.set("name", finalName);
-  const response = await fetch(uploadUrl, {
+  const buffer = Buffer.from(base64Payload, "base64");
+  const target = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(
+    SUPABASE_STORAGE_BUCKET
+  )}/${finalName}`;
+  const response = await fetch(target, {
     method: "POST",
     headers: {
       apikey: SUPABASE_KEY,
