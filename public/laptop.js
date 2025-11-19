@@ -68,6 +68,10 @@ function showStatus(message, type = "success") {
 function renderLaptop(laptop) {
   const layout = document.getElementById("detail-layout");
   const modelName = laptop.model?.name ? `• ${laptop.model.name}` : "";
+  const warrantyLabel =
+    laptop.warranty && laptop.warranty > 0
+      ? `${laptop.warranty} year${laptop.warranty > 1 ? "s" : ""}`
+      : "";
   layout.innerHTML = `
     <div>
       <h1>${laptop.title}</h1>
@@ -84,6 +88,7 @@ function renderLaptop(laptop) {
         ${renderSpec("Storage", laptop.storage)}
         ${renderSpec("Display", laptop.display)}
         ${renderSpec("In Stock", `${laptop.stock ?? 0} units`)}
+        ${renderSpec("Warranty", warrantyLabel)}
       </div>
     </div>
     <aside class="panel">

@@ -231,6 +231,45 @@ async function storeImage(finalName, base64Payload, mime) {
   return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${finalName}`;
 }
 
+function extractStoragePath(url) {
+  if (!SUPABASE_STORAGE_BUCKET || !url) return null;
+  const prefix = `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/`;
+  if (!url.startsWith(prefix)) return null;
+  return url.slice(prefix.length);
+}
+
+async function deleteStoredImage(url) {
+  if (!SUPABASE_STORAGE_BUCKET) {
+    if (url && url.startsWith("/uploads/")) {
+      const relative = url.replace(/^\/?uploads\//, "");
+      try {
+        await fs.unlink(path.join(UPLOAD_DIR, relative));
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+    }
+    return;
+  }
+  const objectPath = extractStoragePath(url);
+  if (!objectPath) return;
+  const response = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_STORAGE_BUCKET)}/${objectPath}`,
+    {
+      method: "DELETE",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+      },
+    }
+  );
+  if (!response.ok && response.status !== 404) {
+    const text = await response.text();
+    const err = new Error(text || "Failed to delete image from Supabase Storage");
+    err.status = response.status;
+    throw err;
+  }
+}
+
 function mapCompany(record) {
   if (!record) return null;
   return {
@@ -257,6 +296,7 @@ function mapLaptop(record) {
     description: record.description || "",
     images: Array.isArray(record.images) ? record.images : record.images ? [record.images] : [],
     stock: record.stock ?? 0,
+    warranty: record.warranty != null ? Number(record.warranty) : 0,
     company,
   };
 }
@@ -541,8 +581,9 @@ async function handleApi(req, res, pathname, searchParams) {
             storage: body.storage || "",
             display: body.display || "",
             description: body.description || "",
+            warranty: body.warranty != null ? Number(body.warranty) : 0,
             images: Array.isArray(body.images)
-              ? body.images
+              ? body.images.filter(Boolean)
               : typeof body.images === "string" && body.images
               ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
               : [],
@@ -560,9 +601,72 @@ async function handleApi(req, res, pathname, searchParams) {
           reply(201, mapLaptop(hydrated?.[0]));
           return;
         }
+        if (method === "PATCH" && slug) {
+          if (!requireAuth(req, res, session, { admin: true })) return;
+          const body = await parseBody(req);
+          if (!body) {
+            reply(400, { error: "Missing payload" });
+            return;
+          }
+          const payload = {
+            brand_id: body.companyId,
+            title: body.title,
+            price: body.price != null ? Number(body.price) : undefined,
+            gpu: body.gpu,
+            cpu: body.cpu,
+            ram: body.ram,
+            storage: body.storage,
+            display: body.display,
+            description: body.description,
+            warranty: body.warranty != null ? Number(body.warranty) : undefined,
+            images: Array.isArray(body.images)
+              ? body.images.filter(Boolean)
+              : typeof body.images === "string" && body.images
+              ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
+              : undefined,
+            stock: body.stock != null ? Number(body.stock) : undefined,
+          };
+          Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
+          if (payload.brand_id) {
+            const brands = await sb("brands", { params: { select: "id", id: `eq.${payload.brand_id}` } });
+            if (!brands.length) {
+              reply(404, { error: "Brand not found" });
+              return;
+            }
+          }
+          await sb("laptops", {
+            method: "PATCH",
+            params: { id: `eq.${slug}` },
+            headers: { Prefer: "return=representation" },
+            body: payload,
+          });
+          const hydrated = await sb("laptops", {
+            params: { select: "*,brands(*)", id: `eq.${slug}` },
+          });
+          if (!hydrated.length) {
+            reply(404, { error: "Laptop not found" });
+            return;
+          }
+          reply(200, mapLaptop(hydrated?.[0]));
+          return;
+        }
         if (method === "DELETE" && slug) {
           if (!requireAuth(req, res, session, { admin: true })) return;
+          const laptops = await sb("laptops", {
+            params: { select: "id,images", id: `eq.${slug}` },
+          });
+          const record = laptops?.[0];
           await sb("laptops", { method: "DELETE", params: { id: `eq.${slug}` } });
+          if (record?.images) {
+            const images = Array.isArray(record.images) ? record.images : [record.images];
+            for (const image of images.filter(Boolean)) {
+              try {
+                await deleteStoredImage(image);
+              } catch (error) {
+                console.error("Failed to delete stored image", image, error.message);
+              }
+            }
+          }
           reply(200, { success: true });
           return;
         }

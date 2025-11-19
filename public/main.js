@@ -45,6 +45,10 @@ function createLaptopCard(laptop) {
   const card = document.createElement("article");
   card.className = "laptop-card";
   const image = laptop.images?.[0] || "https://placehold.co/600x400?text=Laptop";
+  const warrantyLabel =
+    laptop.warranty && laptop.warranty > 0
+      ? `<span>Warranty: <strong>${laptop.warranty} yr${laptop.warranty > 1 ? "s" : ""}</strong></span>`
+      : "";
   card.innerHTML = `
     <img src="${image}" loading="lazy" alt="${laptop.title}" />
     <div>
@@ -60,6 +64,7 @@ function createLaptopCard(laptop) {
       <span>CPU: <strong>${laptop.cpu || "TBD"}</strong></span>
       <span>RAM: <strong>${laptop.ram || "TBD"}</strong></span>
       <span>Storage: <strong>${laptop.storage || "TBD"}</strong></span>
+      ${warrantyLabel}
     </div>
     <div class="price">${new Intl.NumberFormat("en-EG", {
       style: "currency",

@@ -1,15 +1,15 @@
 :root {
-  --bg: #0f172a;
-  --bg-alt: #111826;
-  --panel: #1e293b;
-  --panel-alt: #1b2537;
-  --text: #f8fafc;
-  --text-muted: #cbd5f5;
-  --accent: #38bdf8;
-  --accent-strong: #0ea5e9;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+  --bg: #fdfbf5;
+  --bg-alt: #ffffff;
+  --panel: #ffffff;
+  --panel-alt: #f7f2e6;
+  --text: #111;
+  --text-muted: #6b5a30;
+  --accent: #d9a135;
+  --accent-strong: #b8820c;
+  --danger: #c05b4d;
+  --success: #4c8f65;
+  --shadow: 0 18px 35px rgba(0, 0, 0, 0.08);
   font-size: 16px;
 }
 
@@ -20,7 +20,7 @@
 body {
   margin: 0;
   font-family: "Cairo", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: linear-gradient(160deg, var(--bg) 0%, #020617 100%);
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   direction: ltr;
@@ -41,8 +41,8 @@ header {
   top: 0;
   z-index: 10;
   backdrop-filter: blur(18px);
-  background: rgba(15, 23, 42, 0.72);
-  border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+  background: rgba(5, 5, 5, 0.9);
+  border-bottom: 1px solid rgba(217, 161, 53, 0.4);
 }
 
 .logo {
@@ -54,17 +54,13 @@ header {
   direction: ltr;
 }
 
-.logo span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.logo img {
   width: 2.5rem;
   height: 2.5rem;
+  object-fit: contain;
   border-radius: 0.75rem;
-  background: linear-gradient(145deg, var(--accent), var(--accent-strong));
-  color: var(--bg);
-  font-weight: 800;
-  letter-spacing: 1px;
+  background: #fff;
+  padding: 0.15rem;
 }
 
 nav {
@@ -75,12 +71,12 @@ nav {
 
 nav a {
   font-weight: 500;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.75);
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
 nav a:hover {
-  color: var(--text);
+  color: var(--accent);
   transform: translateY(-2px);
 }
 
@@ -98,7 +94,7 @@ nav a:hover {
   margin-left: 0.5rem;
   border-radius: 999px;
   background: var(--accent);
-  color: var(--bg);
+  color: #1a1a1a;
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -143,12 +139,12 @@ nav a:hover {
 
 .btn-primary {
   background: linear-gradient(145deg, var(--accent), var(--accent-strong));
-  color: var(--bg);
-  box-shadow: 0 18px 30px rgba(14, 165, 233, 0.35);
+  color: #1a1a1a;
+  box-shadow: 0 18px 30px rgba(244, 195, 73, 0.35);
 }
 
 .btn-outline {
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   color: var(--text-muted);
   background: transparent;
 }
@@ -162,17 +158,17 @@ main {
 }
 
 .panel {
-  background: linear-gradient(160deg, var(--panel), var(--panel-alt));
+  background: var(--panel);
   border-radius: 1.5rem;
   padding: 2rem 2.5rem;
   box-shadow: var(--shadow);
   margin-bottom: 2.5rem;
-  border: 1px solid rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(217, 161, 53, 0.18);
 }
 
 .panel-lite {
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(56, 189, 248, 0.18);
+  background: var(--panel-alt);
+  border: 1px solid rgba(217, 161, 53, 0.18);
   border-radius: 1.1rem;
   padding: 1.5rem;
   display: grid;
@@ -212,8 +208,8 @@ main {
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
   border-radius: 999px;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(217, 161, 53, 0.1);
+  border: 1px solid rgba(217, 161, 53, 0.35);
   font-size: 0.85rem;
   color: var(--text);
 }
@@ -326,9 +322,9 @@ label {
 input,
 select,
 textarea {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  border: 1px solid rgba(244, 195, 73, 0.2);
   border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   font: inherit;
@@ -340,7 +336,7 @@ select:focus,
 textarea:focus {
   border-color: var(--accent);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+  box-shadow: 0 0 0 3px rgba(244, 195, 73, 0.25);
 }
 
 .laptop-grid {
@@ -350,8 +346,8 @@ textarea:focus {
 }
 
 .laptop-card {
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(56, 189, 248, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(244, 195, 73, 0.15);
   border-radius: 1.25rem;
   padding: 1.5rem;
   display: flex;
@@ -362,8 +358,8 @@ textarea:focus {
 
 .laptop-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(56, 189, 248, 0.45);
-  box-shadow: 0 22px 40px rgba(14, 165, 233, 0.18);
+  border-color: rgba(244, 195, 73, 0.45);
+  box-shadow: 0 22px 40px rgba(244, 195, 73, 0.2);
 }
 
 .laptop-card img {
@@ -393,7 +389,7 @@ textarea:focus {
   align-items: center;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  background: rgba(56, 189, 248, 0.15);
+  background: rgba(244, 195, 73, 0.15);
   color: var(--accent);
   font-size: 0.75rem;
   font-weight: 600;
@@ -413,10 +409,10 @@ textarea:focus {
 }
 
 .stat-card {
-  background: rgba(15, 23, 42, 0.55);
+  background: var(--panel);
   border-radius: 1rem;
   padding: 1.75rem;
-  border: 1px solid rgba(56, 189, 248, 0.18);
+  border: 1px solid rgba(217, 161, 53, 0.15);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -435,9 +431,9 @@ textarea:focus {
 
 footer {
   padding: 2rem 3rem 3rem;
-  color: var(--text-muted);
-  border-top: 1px solid rgba(56, 189, 248, 0.1);
-  background: rgba(15, 23, 42, 0.7);
+  color: rgba(255, 255, 255, 0.75);
+  border-top: 1px solid rgba(217, 161, 53, 0.25);
+  background: #050505;
 }
 
 footer a {

@@ -63,6 +63,7 @@ create table laptops (
   display text,
   description text,
   images text[] not null default '{}',
+  warranty integer not null default 0,
   stock integer not null default 0,
   created_at timestamptz default timezone('utc', now())
 );

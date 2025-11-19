@@ -9,7 +9,7 @@
   <body>
     <header>
       <a class="logo" href="/">
-        <span>NT</span>
+        <img src="/logo.jpg" alt="Nour Tech logo" class="logo-mark" />
         Nour Tech
       </a>
       <nav>
@@ -71,6 +71,7 @@
 
           <form id="laptop-form" class="panel-lite">
             <h3>Publish Laptop Listing</h3>
+            <input type="hidden" name="id" id="laptop-id" />
             <label>
               Brand
               <select name="companyId" id="laptop-company" required>
@@ -123,6 +124,10 @@
               <input type="text" name="display" placeholder="16&quot; QHD+ 240Hz" />
             </label>
             <label>
+              Warranty (years)
+              <input type="number" name="warranty" min="0" step="1" placeholder="2" />
+            </label>
+            <label>
               Stock Count
               <input type="number" name="stock" min="0" step="1" placeholder="5" />
             </label>
@@ -154,6 +159,7 @@
               ></textarea>
             </label>
             <button type="submit" class="btn btn-primary">Publish Listing</button>
+            <button type="button" class="btn btn-outline" id="laptop-cancel" hidden>Cancel Edit</button>
             <div class="order-status" id="laptop-status"></div>
           </form>
         </div>

@@ -9,6 +9,7 @@ const state = {
   userSearch: "",
 };
 let bootstrapped = false;
+let editingLaptopId = null;
 
 function redirectToLogin() {
   const target = `/login.html?next=${encodeURIComponent("/admin.html")}`;
@@ -145,6 +146,58 @@ function syncImagePreview() {
   const textarea = document.querySelector('#laptop-form textarea[name="images"]');
   if (!textarea) return;
   renderImagePreview(parseImageList(textarea.value));
+}
+
+function resetLaptopForm() {
+  const form = document.getElementById("laptop-form");
+  if (!form) return;
+  form.reset();
+  const idInput = form.querySelector('input[name="id"]');
+  if (idInput) {
+    idInput.value = "";
+  }
+  editingLaptopId = null;
+  const submitButton = form.querySelector("button[type='submit']");
+  if (submitButton) {
+    submitButton.textContent = "Publish Listing";
+  }
+  const cancelButton = document.getElementById("laptop-cancel");
+  if (cancelButton) {
+    cancelButton.hidden = true;
+  }
+  renderImagePreview([]);
+}
+
+function startEditingLaptop(laptopId) {
+  const laptop = state.laptops.find((item) => item.id === laptopId);
+  if (!laptop) return;
+  const form = document.getElementById("laptop-form");
+  if (!form) return;
+  editingLaptopId = laptopId;
+  const idInput = form.querySelector('input[name="id"]');
+  if (idInput) idInput.value = laptop.id;
+  const companySelect = form.querySelector('select[name="companyId"]');
+  if (companySelect) companySelect.value = laptop.companyId || "";
+  form.querySelector('input[name="title"]').value = laptop.title || "";
+  form.querySelector('input[name="price"]').value = laptop.price ?? "";
+  form.querySelector('input[name="gpu"]').value = laptop.gpu || "";
+  form.querySelector('input[name="cpu"]').value = laptop.cpu || "";
+  form.querySelector('input[name="ram"]').value = laptop.ram || "";
+  form.querySelector('input[name="storage"]').value = laptop.storage || "";
+  form.querySelector('input[name="display"]').value = laptop.display || "";
+  form.querySelector('input[name="stock"]').value = laptop.stock ?? "";
+  const warrantyInput = form.querySelector('input[name="warranty"]');
+  if (warrantyInput) warrantyInput.value = laptop.warranty ?? "";
+  form.querySelector('textarea[name="description"]').value = laptop.description || "";
+  const imagesTextarea = form.querySelector('textarea[name="images"]');
+  imagesTextarea.value = (laptop.images || []).join("\n");
+  renderImagePreview(laptop.images || []);
+  const submitButton = form.querySelector("button[type='submit']");
+  if (submitButton) submitButton.textContent = "Update Listing";
+  const cancelButton = document.getElementById("laptop-cancel");
+  if (cancelButton) cancelButton.hidden = false;
+  showStatus("laptop-status", `Editing ${laptop.title}`);
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function readFileAsDataURL(file) {
@@ -305,18 +358,22 @@ function renderLaptopCatalog() {
     .sort((a, b) => a.title.localeCompare(b.title))
     .forEach((laptop) => {
       const company = state.companies.find((item) => item.id === laptop.companyId);
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td><strong>${laptop.title}</strong><div class="field-hint">${company ? company.name : "—"}</div></td>
-        <td>${new Intl.NumberFormat("en-EG", {
-          style: "currency",
-          currency: laptop.currency || "EGP",
-          maximumFractionDigits: 0,
-        }).format(laptop.price)}</td>
-        <td>
-          <button class="link-button" data-delete-laptop="${laptop.id}">Remove</button>
-        </td>
-      `;
+    const warrantyLabel = laptop.warranty ? `${laptop.warranty} yr${laptop.warranty > 1 ? "s" : ""} warranty` : "";
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${laptop.title}</strong><div class="field-hint">${company ? company.name : "—"}</div>${
+        warrantyLabel ? `<div class="field-hint">${warrantyLabel}</div>` : ""
+      }</td>
+      <td>${new Intl.NumberFormat("en-EG", {
+        style: "currency",
+        currency: laptop.currency || "EGP",
+        maximumFractionDigits: 0,
+      }).format(laptop.price)}</td>
+      <td>
+        <button class="link-button" data-edit-laptop="${laptop.id}">Edit</button>
+        <button class="link-button" data-delete-laptop="${laptop.id}">Remove</button>
+      </td>
+    `;
       fragment.appendChild(row);
     });
   tbody.appendChild(fragment);
@@ -426,6 +483,9 @@ async function deleteLaptop(laptopId) {
     });
     state.laptops = state.laptops.filter((item) => item.id !== laptopId);
     renderLaptopCatalog();
+    if (editingLaptopId === laptopId) {
+      resetLaptopForm();
+    }
     state.orders = state.orders.map((order) =>
       order.laptopId === laptopId ? { ...order, laptop: null } : order
     );
@@ -671,25 +731,39 @@ async function handleLaptopSubmit(event) {
   const form = event.currentTarget;
   const formData = new FormData(form);
   const payload = Object.fromEntries(formData.entries());
+  const editId = payload.id ? payload.id.trim() : "";
+  delete payload.id;
   if (payload.price !== undefined && payload.price !== "") {
     payload.price = Number(payload.price);
   }
   if (payload.stock !== undefined && payload.stock !== "") {
     payload.stock = Number(payload.stock);
   }
+  if (payload.warranty !== undefined && payload.warranty !== "") {
+    payload.warranty = Number(payload.warranty);
+  } else {
+    payload.warranty = 0;
+  }
+  payload.images = parseImageList(payload.images);
   try {
-    showStatus("laptop-status", "Publishing listing…");
-    const laptop = await fetchJSON(`${API_BASE}/laptops`, {
-      method: "POST",
+    showStatus("laptop-status", editId ? "Updating listing…" : "Publishing listing…");
+    const endpoint = editId ? `${API_BASE}/laptops/${encodeURIComponent(editId)}` : `${API_BASE}/laptops`;
+    const method = editId ? "PATCH" : "POST";
+    const laptop = await fetchJSON(endpoint, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    state.laptops.push(laptop);
+    const index = state.laptops.findIndex((item) => item.id === laptop.id);
+    if (index === -1) {
+      state.laptops.push(laptop);
+    } else {
+      state.laptops[index] = laptop;
+    }
     renderLaptopCatalog();
     updateStats();
-    showStatus("laptop-status", `Listing ${laptop.title} is live.`);
-    form.reset();
-    renderImagePreview([]);
+    showStatus("laptop-status", editId ? `Listing ${laptop.title} updated.` : `Listing ${laptop.title} is live.`);
+    resetLaptopForm();
   } catch (error) {
     console.error(error);
     if (error.status === 401 || error.status === 403) {
@@ -715,9 +789,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const ordersBody = document.getElementById("orders-body");
   const userSearchInput = document.getElementById("user-search");
   const usersBody = document.getElementById("users-body");
+  const cancelEditButton = document.getElementById("laptop-cancel");
 
   if (companyForm) companyForm.addEventListener("submit", handleCompanySubmit);
   if (laptopForm) laptopForm.addEventListener("submit", handleLaptopSubmit);
+  if (cancelEditButton) {
+    cancelEditButton.addEventListener("click", () => resetLaptopForm());
+  }
   if (orderFilter) {
     orderFilter.addEventListener("change", (event) => {
       loadOrders(event.target.value);
@@ -750,6 +828,8 @@ document.addEventListener("DOMContentLoaded", () => {
       renderImagePreview(filtered);
     });
   }
+
+  resetLaptopForm();
   if (companyList) {
     companyList.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-delete-company]");
@@ -759,9 +839,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (catalogBody) {
     catalogBody.addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-delete-laptop]");
-      if (!button) return;
-      deleteLaptop(button.dataset.deleteLaptop);
+      const editButton = event.target.closest("button[data-edit-laptop]");
+      if (editButton) {
+        startEditingLaptop(editButton.dataset.editLaptop);
+        return;
+      }
+      const deleteButton = event.target.closest("button[data-delete-laptop]");
+      if (deleteButton) {
+        deleteLaptop(deleteButton.dataset.deleteLaptop);
+      }
     });
   }
   if (ordersBody) {
