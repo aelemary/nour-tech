@@ -32,6 +32,7 @@ if (fsSync.existsSync(envPath)) {
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "";
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment variables.");
   process.exit(1);
@@ -198,6 +199,36 @@ async function sb(pathname, { method = "GET", params = {}, headers = {}, body } 
     return JSON.parse(text);
   }
   return text;
+}
+
+async function storeImage(finalName, base64Payload, mime) {
+  const buffer = Buffer.from(base64Payload, "base64");
+  if (!SUPABASE_STORAGE_BUCKET) {
+    await ensureUploadDir();
+    const filePath = path.join(UPLOAD_DIR, finalName);
+    await fs.writeFile(filePath, buffer);
+    return `/uploads/${finalName}`;
+  }
+  const objectPath = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(
+    SUPABASE_STORAGE_BUCKET
+  )}/${finalName}`;
+  const response = await fetch(objectPath, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": mime || "application/octet-stream",
+      "x-upsert": "true",
+    },
+    body: buffer,
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    const err = new Error(text || "Failed to upload image to Supabase Storage");
+    err.status = response.status;
+    throw err;
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${finalName}`;
 }
 
 function mapCompany(record) {
@@ -695,7 +726,6 @@ async function handleApi(req, res, pathname, searchParams) {
             reply(400, { error: "Missing base64 data" });
             return;
           }
-          await ensureUploadDir();
           let mime = "";
           let base64Payload = "";
           if (body.data.startsWith("data:")) {
@@ -731,9 +761,8 @@ async function handleApi(req, res, pathname, searchParams) {
             ? safeBase.slice(0, -extension.length)
             : safeBase;
           const finalName = `${Date.now()}-${baseName || "upload"}${extension}`;
-          const filePath = path.join(UPLOAD_DIR, finalName);
-          await fs.writeFile(filePath, Buffer.from(base64Payload, "base64"));
-          reply(201, { url: `/uploads/${finalName}` });
+          const url = await storeImage(finalName, base64Payload, mime);
+          reply(201, { url });
           return;
         }
         break;
