@@ -209,11 +209,12 @@ async function storeImage(finalName, base64Payload, mime) {
     await fs.writeFile(filePath, buffer);
     return `/uploads/${finalName}`;
   }
-  const objectPath = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(
-    SUPABASE_STORAGE_BUCKET
-  )}/${finalName}`;
-  const response = await fetch(objectPath, {
-    method: "PUT",
+  const uploadUrl = new URL(
+    `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_STORAGE_BUCKET)}`
+  );
+  uploadUrl.searchParams.set("name", finalName);
+  const response = await fetch(uploadUrl, {
+    method: "POST",
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
