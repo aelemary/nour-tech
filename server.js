@@ -213,7 +213,7 @@ async function storeImage(finalName, base64Payload, mime) {
     SUPABASE_STORAGE_BUCKET
   )}/${finalName}`;
   const response = await fetch(objectPath, {
-    method: "POST",
+    method: "PUT",
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
