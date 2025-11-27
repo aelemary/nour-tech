@@ -38,11 +38,12 @@
           <div>
             <h1>Available Laptops</h1>
             <p class="inventory-subtitle">
-              Search the live Nour Tech catalog and jump straight into the listing you need.
+              Search the live Nour Tech catalog and narrow by brand, GPU, or price band.
             </p>
           </div>
-          <form id="filter-form" class="search-form">
+          <form id="filter-form" class="filters-form">
             <label>
+              Keywords
               <input
                 type="search"
                 id="search"
@@ -50,7 +51,32 @@
                 placeholder="Search by title, GPU, RAM, or storage…"
               />
             </label>
-            <button type="submit" class="btn btn-primary">Search</button>
+            <label>
+              Brand
+              <select id="filter-company" name="companyId">
+                <option value="">Any brand</option>
+              </select>
+            </label>
+            <label>
+              GPU
+              <select id="filter-gpu" name="gpu">
+                <option value="">Any GPU</option>
+              </select>
+            </label>
+            <div class="inline-field">
+              <label>
+                Min Price
+                <input type="number" name="minPrice" min="0" inputmode="decimal" placeholder="15000" />
+              </label>
+              <label>
+                Max Price
+                <input type="number" name="maxPrice" min="0" inputmode="decimal" placeholder="80000" />
+              </label>
+            </div>
+            <div class="filter-actions">
+              <button type="submit" class="btn btn-primary">Apply Filters</button>
+              <button type="button" class="btn btn-outline" id="filter-reset">Reset</button>
+            </div>
           </form>
         </div>
         <div id="inventory-status" class="order-status"></div>

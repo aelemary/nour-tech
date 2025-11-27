@@ -1,6 +1,7 @@
 const API_BASE = "/api";
 const state = {
   laptops: [],
+  companies: [],
 };
 let inventoryStatusEl = null;
 let statusTimer = null;
@@ -39,6 +40,46 @@ function showInventoryStatus(message, type = "success") {
   statusTimer = window.setTimeout(() => {
     inventoryStatusEl.innerHTML = "";
   }, 3000);
+}
+
+function populateCompanyFilter(companies = []) {
+  const select = document.getElementById("filter-company");
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = `<option value="">Any brand</option>`;
+  companies.forEach((company) => {
+    const option = document.createElement("option");
+    option.value = company.id;
+    option.textContent = company.name;
+    select.appendChild(option);
+  });
+  if (current && companies.find((company) => company.id === current)) {
+    select.value = current;
+  }
+}
+
+function populateGpuFilter(laptops = []) {
+  const select = document.getElementById("filter-gpu");
+  if (!select) return;
+  const current = select.value;
+  const gpuValues = Array.from(
+    new Set(
+      laptops
+        .map((item) => item.gpu || "")
+        .filter(Boolean)
+        .map((gpu) => gpu.trim())
+    )
+  ).sort((a, b) => a.localeCompare(b));
+  select.innerHTML = `<option value="">Any GPU</option>`;
+  gpuValues.forEach((gpu) => {
+    const option = document.createElement("option");
+    option.value = gpu;
+    option.textContent = gpu;
+    select.appendChild(option);
+  });
+  if (current && gpuValues.includes(current)) {
+    select.value = current;
+  }
 }
 
 function createLaptopCard(laptop) {
@@ -106,6 +147,10 @@ async function loadInventory(params = {}) {
   return fetchJSON(url.toString());
 }
 
+async function loadCompanies() {
+  return fetchJSON(`${API_BASE}/companies`);
+}
+
 function toggleEmptyState(hasResults) {
   const empty = document.getElementById("empty");
   if (!empty) return;
@@ -124,6 +169,7 @@ function renderLaptops(laptops) {
   const fragment = document.createDocumentFragment();
   laptops.forEach((laptop) => fragment.appendChild(createLaptopCard(laptop)));
   results.appendChild(fragment);
+  populateGpuFilter(laptops);
 }
 
 async function init() {
@@ -131,9 +177,14 @@ async function init() {
   inventoryStatusEl = document.getElementById("inventory-status");
   updateCartCount();
   try {
-    const inventory = await loadInventory();
+    const inventoryPromise = loadInventory();
+    const companiesPromise = loadCompanies().catch(() => []);
+    const [inventory, companies] = await Promise.all([inventoryPromise, companiesPromise]);
+    state.companies = companies || [];
+    populateCompanyFilter(state.companies);
     renderLaptops(inventory);
     const form = document.getElementById("filter-form");
+    const resetButton = document.getElementById("filter-reset");
     if (form) {
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -147,6 +198,16 @@ async function init() {
         } else {
           showInventoryStatus("Inventory updated.");
         }
+      });
+    }
+    if (resetButton && form) {
+      resetButton.addEventListener("click", async () => {
+        form.reset();
+        populateCompanyFilter(state.companies);
+        showInventoryStatus("Resetting filters…");
+        const results = await loadInventory();
+        renderLaptops(results);
+        showInventoryStatus("Showing all laptops.");
       });
     }
   } catch (error) {

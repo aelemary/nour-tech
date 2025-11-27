@@ -38,14 +38,26 @@ function renderImages(images = [], title = "Laptop image") {
   if (!images.length) {
     images = ["https://placehold.co/800x500?text=Laptop+Preview"];
   }
-  return images
+  const hasMultiple = images.length > 1;
+  const slides = images
     .map(
       (url, index) =>
-        `<figure>
+        `<figure class="gallery-slide" data-index="${index}">
           <img src="${url}" alt="${title} ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" />
         </figure>`
     )
     .join("");
+  return `
+    <div class="gallery-slider" data-gallery tabindex="0" aria-label="Laptop images">
+      <button class="gallery-nav prev" type="button" aria-label="Previous image"${hasMultiple ? "" : " disabled"}>‹</button>
+      <div class="gallery-window">
+        <div class="gallery-track">
+          ${slides}
+        </div>
+      </div>
+      <button class="gallery-nav next" type="button" aria-label="Next image"${hasMultiple ? "" : " disabled"}>›</button>
+    </div>
+  `;
 }
 
 function renderSpec(label, value) {
@@ -112,6 +124,46 @@ function renderLaptop(laptop) {
       </p>
     </aside>
   `;
+  initGallery();
+}
+
+function initGallery() {
+  const slider = document.querySelector("[data-gallery]");
+  if (!slider) return;
+  const track = slider.querySelector(".gallery-track");
+  const slides = Array.from(slider.querySelectorAll(".gallery-slide"));
+  if (!track || !slides.length) return;
+  const prev = slider.querySelector(".gallery-nav.prev");
+  const next = slider.querySelector(".gallery-nav.next");
+  let index = 0;
+
+  const clampIndex = (value) => Math.min(Math.max(value, 0), slides.length - 1);
+
+  const setIndex = (value) => {
+    index = clampIndex(value);
+    track.style.transform = `translateX(-${index * 100}%)`;
+    if (prev) prev.disabled = index === 0;
+    if (next) next.disabled = index === slides.length - 1;
+  };
+
+  if (prev) {
+    prev.addEventListener("click", () => setIndex(index - 1));
+  }
+  if (next) {
+    next.addEventListener("click", () => setIndex(index + 1));
+  }
+
+  slider.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setIndex(index - 1);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setIndex(index + 1);
+    }
+  });
+
+  setIndex(0);
 }
 
 function attachPurchaseActions(laptop) {
