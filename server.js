@@ -273,6 +273,7 @@ function mapLaptop(record) {
   return {
     id: record.id,
     companyId: record.brand_id,
+    shortName: record.short_name || "",
     title: record.title,
     price: Number(record.price) || 0,
     currency: "EGP",
@@ -561,6 +562,7 @@ async function handleApi(req, res, pathname, searchParams) {
           }
           const payload = {
             brand_id: body.companyId,
+            short_name: body.shortName || "",
             title: body.title,
             price: Number(body.price),
             gpu: body.gpu || "",
@@ -598,6 +600,7 @@ async function handleApi(req, res, pathname, searchParams) {
           }
           const payload = {
             brand_id: body.companyId,
+            short_name: body.shortName,
             title: body.title,
             price: body.price != null ? Number(body.price) : undefined,
             gpu: body.gpu,

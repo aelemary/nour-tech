@@ -179,6 +179,8 @@ function startEditingLaptop(laptopId) {
   const companySelect = form.querySelector('select[name="companyId"]');
   if (companySelect) companySelect.value = laptop.companyId || "";
   form.querySelector('input[name="title"]').value = laptop.title || "";
+  const shortNameInput = form.querySelector('input[name="shortName"]');
+  if (shortNameInput) shortNameInput.value = laptop.shortName || "";
   form.querySelector('input[name="price"]').value = laptop.price ?? "";
   form.querySelector('input[name="gpu"]').value = laptop.gpu || "";
   form.querySelector('input[name="cpu"]').value = laptop.cpu || "";
@@ -733,6 +735,7 @@ async function handleLaptopSubmit(event) {
   const payload = Object.fromEntries(formData.entries());
   const editId = payload.id ? payload.id.trim() : "";
   delete payload.id;
+  payload.shortName = payload.shortName ? payload.shortName.trim() : "";
   if (payload.price !== undefined && payload.price !== "") {
     payload.price = Number(payload.price);
   }

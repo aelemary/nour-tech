@@ -86,47 +86,32 @@ function createLaptopCard(laptop) {
   const card = document.createElement("article");
   card.className = "laptop-card";
   const image = laptop.images?.[0] || "https://placehold.co/600x400?text=Laptop";
-  const warrantyLabel =
-    laptop.warranty && laptop.warranty > 0
-      ? `<span>Warranty: <strong>${laptop.warranty} yr${laptop.warranty > 1 ? "s" : ""}</strong></span>`
-      : "";
   card.innerHTML = `
-    <img src="${image}" loading="lazy" alt="${laptop.title}" />
-    <div>
-      <span class="badge">${laptop.company?.name || "Unassigned"}</span>
-    </div>
-    <h3>${laptop.title}</h3>
-    <p>${
-      laptop.description ||
-      "Certified build with full health checks so you know it’s ready the moment it arrives."
-    }</p>
-    <div class="laptop-meta">
-      <span>GPU: <strong>${laptop.gpu || "TBD"}</strong></span>
-      <span>CPU: <strong>${laptop.cpu || "TBD"}</strong></span>
-      <span>RAM: <strong>${laptop.ram || "TBD"}</strong></span>
-      <span>Storage: <strong>${laptop.storage || "TBD"}</strong></span>
-      ${warrantyLabel}
-    </div>
-    <div class="price">${new Intl.NumberFormat("en-EG", {
-      style: "currency",
-      currency: laptop.currency || "EGP",
-      maximumFractionDigits: 0,
-    }).format(laptop.price)}</div>
-    <div class="btn-stack card-actions">
-      <button class="btn btn-outline" data-add-to-cart="${laptop.id}">Add to Cart</button>
-      <a class="btn btn-primary" href="/laptop.html?id=${encodeURIComponent(laptop.id)}">View Details</a>
+    <img class="card-thumb" src="${image}" loading="lazy" alt="${laptop.title}" />
+    <div class="card-content">
+      <div class="card-title-row">
+        <span class="badge">${laptop.company?.name || "Unassigned"}</span>
+        <h3 class="title-desktop">${laptop.title}</h3>
+        <h3 class="title-mobile">${laptop.shortName || laptop.title}</h3>
+      </div>
+      <div class="spec-inline">
+        <span><strong>GPU</strong><span>${laptop.gpu || "n/a"}</span></span>
+        <span><strong>CPU</strong><span>${laptop.cpu || "n/a"}</span></span>
+      </div>
+      <div class="card-actions compact-actions">
+        <div class="price">${new Intl.NumberFormat("en-EG", {
+          style: "currency",
+          currency: laptop.currency || "EGP",
+          maximumFractionDigits: 0,
+        }).format(laptop.price)}</div>
+      </div>
     </div>
   `;
-  const button = card.querySelector("[data-add-to-cart]");
-  if (button && window.Cart) {
-    button.addEventListener("click", () => {
-      window.Cart.add(laptop.id);
-      updateCartCount();
-      showInventoryStatus(`${laptop.title} added to cart.`);
-    });
-  } else if (button) {
-    button.disabled = true;
-  }
+  const detailUrl = `/laptop.html?id=${encodeURIComponent(laptop.id)}`;
+  card.dataset.href = detailUrl;
+  card.addEventListener("click", (event) => {
+    window.location.href = detailUrl;
+  });
   return card;
 }
 
