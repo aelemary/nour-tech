@@ -877,7 +877,7 @@ footer a {
 
   .laptop-card {
     display: grid;
-    grid-template-columns: minmax(110px, 32%) 1fr;
+    grid-template-columns: minmax(110px, 34%) 1fr;
     padding: 0.9rem;
     gap: 0.5rem;
     align-items: center;
@@ -894,5 +894,46 @@ footer a {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.35rem;
+  }
+}
+
+/* Device-based mobile layout to avoid relying on viewport width */
+@media (pointer: coarse) {
+  .title-desktop {
+    display: none !important;
+  }
+
+  .title-mobile {
+    display: block !important;
+  }
+
+  .laptop-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .laptop-card {
+    display: grid;
+    grid-template-columns: minmax(110px, 34%) 1fr;
+    padding: 0.9rem;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .card-thumb {
+    min-height: 110px;
+    height: 110px;
+    aspect-ratio: 1 / 1;
+  }
+
+  .compact-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .compact-actions .price {
+    text-align: left;
   }
 }
