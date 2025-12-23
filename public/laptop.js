@@ -84,26 +84,21 @@ function renderLaptop(laptop) {
     laptop.warranty && laptop.warranty > 0
       ? `${laptop.warranty} year${laptop.warranty > 1 ? "s" : ""}`
       : "";
+  const description = laptop.description
+    ? `<p class="detail-description">${laptop.description}</p>`
+    : "";
   layout.innerHTML = `
-    <div>
-      <h1>${laptop.title}</h1>
-      <p class="badge">${laptop.company?.name || "Unassigned"} ${modelName}</p>
-      <p>${laptop.description || "Ready to reserve with documented thermal and warranty checks."}</p>
-      <div class="gallery">
+    <div class="detail-main">
+      <div class="detail-heading">
+        <h1 class="detail-title">${laptop.title}</h1>
+        <p class="badge">${laptop.company?.name || "Unassigned"} ${modelName}</p>
+        ${description}
+      </div>
+      <div class="detail-gallery gallery">
         ${renderImages(laptop.images, laptop.title)}
       </div>
-      <h2>Technical Specifications</h2>
-      <div class="spec-list">
-        ${renderSpec("GPU", laptop.gpu)}
-        ${renderSpec("CPU", laptop.cpu)}
-        ${renderSpec("RAM", laptop.ram)}
-        ${renderSpec("Storage", laptop.storage)}
-        ${renderSpec("Display", laptop.display)}
-        ${renderSpec("In Stock", `${laptop.stock ?? 0} units`)}
-        ${renderSpec("Warranty", warrantyLabel)}
-      </div>
     </div>
-    <aside class="panel">
+    <aside class="panel detail-purchase">
       <h2>Purchase Options</h2>
       <p class="price">${new Intl.NumberFormat("en-EG", {
         style: "currency",
@@ -123,6 +118,18 @@ function renderLaptop(laptop) {
         Need multiple units or a custom tweak? Add the laptop to your cart and leave detailed notes at checkout.
       </p>
     </aside>
+    <section class="detail-specs">
+      <h2>Technical Specifications</h2>
+      <div class="spec-list">
+        ${renderSpec("GPU", laptop.gpu)}
+        ${renderSpec("CPU", laptop.cpu)}
+        ${renderSpec("RAM", laptop.ram)}
+        ${renderSpec("Storage", laptop.storage)}
+        ${renderSpec("Display", laptop.display)}
+        ${renderSpec("In Stock", `${laptop.stock ?? 0} units`)}
+        ${renderSpec("Warranty", warrantyLabel)}
+      </div>
+    </section>
   `;
   initGallery();
 }

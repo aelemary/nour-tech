@@ -20,9 +20,11 @@
         <img src="/logo.jpg" alt="Nour Tech logo" class="logo-mark" />
         Nour Tech
       </a>
-      <nav>
+      <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav">
         <a href="/index.html">Inventory</a>
         <a href="/contact.html">Contact</a>
+        <a href="https://www.facebook.com/share/1BJq8qdpZs/" class="nav-social" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><img src="/data/facebook.png" alt="" class="nav-icon" /></a>
         <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
         <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
         <a href="/admin.html" data-requires-role="admin">Admin</a>
@@ -79,5 +81,6 @@
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
     <script src="/cart.js" defer></script>
+      <script src="/nav.js" defer></script>
   </body>
 </html>
