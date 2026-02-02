@@ -6,7 +6,7 @@ const https = require("https");
 
 const DEFAULT_URL = "https://nourtecheg.com";
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000;
-const DEFAULT_TIMEOUT_MS = 10 * 1000;
+const DEFAULT_TIMEOUT_MS = 100 * 1000;
 const MAX_REDIRECTS = 3;
 
 const targetRaw = process.env.PING_URL || DEFAULT_URL;
