@@ -140,10 +140,18 @@ async function loadItems() {
   }
 
   try {
-    const ids = baseItems.map((item) => item.id).join(",");
-    const url = new URL(`${API_BASE}/products`, window.location.origin);
-    url.searchParams.set("ids", ids);
-    const products = await fetchJSON(url.toString());
+    const ids = baseItems.map((item) => item.id).filter(Boolean);
+    let products = [];
+    if (ids.length) {
+      const url = new URL(`${API_BASE}/products`, window.location.origin);
+      url.searchParams.set("ids", ids.join(","));
+      try {
+        products = await fetchJSON(url.toString());
+      } catch (error) {
+        const fallbackUrl = new URL(`${API_BASE}/products`, window.location.origin);
+        products = await fetchJSON(fallbackUrl.toString());
+      }
+    }
     const merged = baseItems
       .map((entry) => {
         const product = products.find((item) => item.id === entry.id);
@@ -154,6 +162,9 @@ async function loadItems() {
     currentItems = merged;
     renderSummary(merged);
     updateCartCount();
+    if (!merged.length && baseItems.length) {
+      showStatus("Some checkout items are no longer available.", "error");
+    }
   } catch (error) {
     console.error(error);
     showStatus("Couldn't load checkout items—refresh and try again.", "error");

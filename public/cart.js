@@ -138,10 +138,18 @@ async function loadCart() {
   }
 
   try {
-    const ids = stored.map((entry) => entry.id).join(",");
-    const url = new URL(`${API_BASE}/products`, window.location.origin);
-    url.searchParams.set("ids", ids);
-    const products = await fetchJSON(url.toString());
+    const ids = stored.map((entry) => entry.id).filter(Boolean);
+    let products = [];
+    if (ids.length) {
+      const url = new URL(`${API_BASE}/products`, window.location.origin);
+      url.searchParams.set("ids", ids.join(","));
+      try {
+        products = await fetchJSON(url.toString());
+      } catch (error) {
+        const fallbackUrl = new URL(`${API_BASE}/products`, window.location.origin);
+        products = await fetchJSON(fallbackUrl.toString());
+      }
+    }
     const merged = stored
       .map((entry) => {
         const product = products.find((item) => item.id === entry.id);
@@ -151,6 +159,9 @@ async function loadCart() {
       .filter(Boolean);
     currentItems = merged;
     renderCart(merged);
+    if (!merged.length) {
+      showStatus("Some cart items are no longer available.", "error");
+    }
   } catch (error) {
     console.error(error);
     showStatus("Couldn't load the cart right now—refresh and try again.", "error");
