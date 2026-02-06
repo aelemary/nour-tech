@@ -9,7 +9,6 @@ const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const PORT = process.env.PORT || 3000;
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 12;
-const sessions = new Map();
 
 const envPath = path.join(ROOT_DIR, ".env");
 if (fsSync.existsSync(envPath)) {
@@ -37,6 +36,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   process.exit(1);
 }
 const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
+const SESSION_SECRET = process.env.SESSION_SECRET || SUPABASE_KEY;
 
 function sanitizeFilename(name) {
   return name
@@ -103,31 +103,76 @@ function serializeCookie(name, value, options = {}) {
   return cookie;
 }
 
+function base64UrlEncode(input) {
+  return Buffer.from(input)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function base64UrlDecode(input) {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return Buffer.from(padded, "base64").toString("utf8");
+}
+
+function signSession(payload) {
+  const header = base64UrlEncode(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = base64UrlEncode(JSON.stringify(payload));
+  const signature = crypto
+    .createHmac("sha256", SESSION_SECRET)
+    .update(`${header}.${body}`)
+    .digest("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+  return `${header}.${body}.${signature}`;
+}
+
+function parseSessionToken(token) {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [header, body, signature] = parts;
+  const expected = crypto
+    .createHmac("sha256", SESSION_SECRET)
+    .update(`${header}.${body}`)
+    .digest("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+  if (signature !== expected) return null;
+  let payload = null;
+  try {
+    payload = JSON.parse(base64UrlDecode(body));
+  } catch (error) {
+    return null;
+  }
+  if (!payload || !payload.exp || Number(payload.exp) * 1000 < Date.now()) {
+    return null;
+  }
+  return payload;
+}
+
 function createSession(user) {
-  const token = crypto.randomBytes(30).toString("hex");
-  sessions.set(token, {
-    userId: user.id,
+  const now = Math.floor(Date.now() / 1000);
+  return signSession({
+    sub: user.id,
     username: user.username,
     role: user.role,
     fullName: user.fullName || "",
-    createdAt: Date.now(),
-    expiresAt: Date.now() + SESSION_MAX_AGE_MS,
+    iat: now,
+    exp: now + Math.floor(SESSION_MAX_AGE_MS / 1000),
   });
-  return token;
 }
 
-function destroySession(token) {
-  if (!token) return;
-  sessions.delete(token);
+function destroySession() {
+  // Stateless sessions are cleared by expiring the cookie on the client.
 }
 
-function destroySessionsForUser(userId) {
-  if (!userId) return;
-  for (const [token, session] of sessions.entries()) {
-    if (session.userId === userId) {
-      sessions.delete(token);
-    }
-  }
+function destroySessionsForUser() {
+  // Stateless sessions cannot be revoked server-side without a backing store.
 }
 
 function hashPassword(password) {
@@ -393,7 +438,16 @@ async function handleApi(req, res, pathname, searchParams) {
   const slug = segments[2] || "";
   const cookies = parseCookies(req.headers.cookie || "");
   const sessionId = cookies.sessionId;
-  const session = sessionId && sessions.has(sessionId) ? { ...sessions.get(sessionId), token: sessionId } : null;
+  const sessionPayload = parseSessionToken(sessionId);
+  const session = sessionPayload
+    ? {
+        userId: sessionPayload.sub,
+        username: sessionPayload.username,
+        role: sessionPayload.role,
+        fullName: sessionPayload.fullName,
+        token: sessionId,
+      }
+    : null;
 
   const reply = (status, payload, headers = {}) => sendJSON(res, status, payload, headers, req);
 
