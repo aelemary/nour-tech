@@ -1,5 +1,12 @@
 const API_BASE = "/api";
 let statusTimer = null;
+const TYPE_LABELS = {
+  laptop: "Laptop",
+  gpu: "GPU",
+  cpu: "CPU",
+  hdd: "HDD",
+  motherboard: "Motherboard",
+};
 
 async function fetchJSON(url, options = {}) {
   const response = await fetch(url, { credentials: "include", ...options });
@@ -34,9 +41,9 @@ function updateCartCount() {
   }
 }
 
-function renderImages(images = [], title = "Laptop image") {
+function renderImages(images = [], title = "Product image") {
   if (!images.length) {
-    images = ["https://placehold.co/800x500?text=Laptop+Preview"];
+    images = ["https://placehold.co/800x500?text=Product+Preview"];
   }
   const hasMultiple = images.length > 1;
   const slides = images
@@ -48,7 +55,7 @@ function renderImages(images = [], title = "Laptop image") {
     )
     .join("");
   return `
-    <div class="gallery-slider" data-gallery tabindex="0" aria-label="Laptop images">
+    <div class="gallery-slider" data-gallery tabindex="0" aria-label="Product images">
       <button class="gallery-nav prev" type="button" aria-label="Previous image"${hasMultiple ? "" : " disabled"}>‹</button>
       <div class="gallery-window">
         <div class="gallery-track">
@@ -77,57 +84,65 @@ function showStatus(message, type = "success") {
   }, 3000);
 }
 
-function renderLaptop(laptop) {
+function renderProduct(product) {
   const layout = document.getElementById("detail-layout");
-  const modelName = laptop.model?.name ? `• ${laptop.model.name}` : "";
+  const typeLabel = TYPE_LABELS[product.type] || "Product";
   const warrantyLabel =
-    laptop.warranty && laptop.warranty > 0
-      ? `${laptop.warranty} year${laptop.warranty > 1 ? "s" : ""}`
+    product.warranty && product.warranty > 0
+      ? `${product.warranty} year${product.warranty > 1 ? "s" : ""}`
       : "";
-  const description = laptop.description
-    ? `<p class="detail-description">${laptop.description}</p>`
+  const description = product.description
+    ? `<p class="detail-description">${product.description}</p>`
     : "";
+  const specs = [];
+  if (product.type === "laptop") {
+    specs.push(renderSpec("GPU", product.gpu));
+    specs.push(renderSpec("CPU", product.cpu));
+    specs.push(renderSpec("RAM", product.ram));
+    specs.push(renderSpec("Storage", product.storage));
+    specs.push(renderSpec("Display", product.display));
+  }
+  if (product.shortName) {
+    specs.push(renderSpec("Model", product.shortName));
+  }
+  if (warrantyLabel) {
+    specs.push(renderSpec("Warranty", warrantyLabel));
+  }
   layout.innerHTML = `
     <div class="detail-main">
       <div class="detail-heading">
-        <h1 class="detail-title">${laptop.title}</h1>
-        <p class="badge">${laptop.company?.name || "Unassigned"} ${modelName}</p>
+        <h1 class="detail-title">${product.title}</h1>
+        <p class="badge">${product.company?.name || "Unassigned"} • ${typeLabel}</p>
         ${description}
       </div>
       <div class="detail-gallery gallery">
-        ${renderImages(laptop.images, laptop.title)}
+        ${renderImages(product.images, product.title)}
       </div>
     </div>
     <aside class="panel detail-purchase">
       <h2>Purchase Options</h2>
       <p class="price">${new Intl.NumberFormat("en-EG", {
         style: "currency",
-        currency: laptop.currency || "EGP",
+        currency: product.currency || "EGP",
         maximumFractionDigits: 0,
-      }).format(laptop.price)}</p>
+      }).format(product.price)}</p>
       <p class="field-hint">
         Complete payment on the checkout page. Cash on delivery is confirmed as soon as you submit the order.
       </p>
       <div class="btn-stack">
-        <button class="btn btn-primary" data-buy-now="${laptop.id}">Buy Now</button>
-        <button class="btn btn-outline" data-add-cart="${laptop.id}">Add to Cart</button>
+        <button class="btn btn-primary" data-buy-now="${product.id}">Buy Now</button>
+        <button class="btn btn-outline" data-add-cart="${product.id}">Add to Cart</button>
         <a class="btn btn-outline" href="/cart.html">View Cart</a>
       </div>
       <div id="order-status" class="order-status"></div>
       <p class="field-hint">
-        Need multiple units or a custom tweak? Add the laptop to your cart and leave detailed notes at checkout.
+        Need multiple units or a custom tweak? Add the product to your cart and leave detailed notes at checkout.
       </p>
     </aside>
     <section class="detail-specs">
-      <h2>Technical Specifications</h2>
+      <h2>Specifications</h2>
       <div class="spec-list">
-        ${renderSpec("GPU", laptop.gpu)}
-        ${renderSpec("CPU", laptop.cpu)}
-        ${renderSpec("RAM", laptop.ram)}
-        ${renderSpec("Storage", laptop.storage)}
-        ${renderSpec("Display", laptop.display)}
-        ${renderSpec("In Stock", `${laptop.stock ?? 0} units`)}
-        ${renderSpec("Warranty", warrantyLabel)}
+        ${specs.join("") || `<div class="field-hint">No specifications listed yet.</div>`}
       </div>
     </section>
   `;
@@ -173,14 +188,14 @@ function initGallery() {
   setIndex(0);
 }
 
-function attachPurchaseActions(laptop) {
+function attachPurchaseActions(product) {
   const addButton = document.querySelector("[data-add-cart]");
   if (addButton) {
     if (window.Cart) {
       addButton.addEventListener("click", () => {
-        window.Cart.add(laptop.id);
+        window.Cart.add(product.id);
         updateCartCount();
-        showStatus(`${laptop.title} added to cart.`);
+        showStatus(`${product.title} added to cart.`);
       });
     } else {
       addButton.disabled = true;
@@ -191,11 +206,11 @@ function attachPurchaseActions(laptop) {
   if (buyButton) {
     buyButton.addEventListener("click", () => {
       if (window.Cart) {
-        window.Cart.setBuyNow(laptop.id, 1);
+        window.Cart.setBuyNow(product.id, 1);
       }
       const url = new URL("/checkout.html", window.location.origin);
       url.searchParams.set("source", "buy");
-      url.searchParams.set("item", laptop.id);
+      url.searchParams.set("item", product.id);
       window.location.href = `${url.pathname}${url.search}`;
     });
   }
@@ -209,17 +224,17 @@ async function init() {
   const layout = document.getElementById("detail-layout");
 
   if (!id) {
-    layout.innerHTML = `<div class="toast error">Missing laptop ID. Return to the <a href="/index.html" style="color: inherit; text-decoration: underline;">inventory list</a>.</div>`;
+    layout.innerHTML = `<div class="toast error">Missing product ID. Return to the <a href="/index.html" style="color: inherit; text-decoration: underline;">inventory list</a>.</div>`;
     return;
   }
 
   try {
-    const laptop = await fetchJSON(`${API_BASE}/laptops/${encodeURIComponent(id)}`);
-    renderLaptop(laptop);
-    attachPurchaseActions(laptop);
+    const product = await fetchJSON(`${API_BASE}/products/${encodeURIComponent(id)}`);
+    renderProduct(product);
+    attachPurchaseActions(product);
   } catch (error) {
     console.error(error);
-    layout.innerHTML = `<div class="toast error">We couldn't find that laptop—maybe it was just reserved already.</div>`;
+    layout.innerHTML = `<div class="toast error">We couldn't find that product—maybe it was just reserved already.</div>`;
   }
 }
 

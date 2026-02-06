@@ -93,8 +93,9 @@ function renderSummary(items) {
     total += lineTotal;
     const hintParts = [];
     if (item.company?.name) hintParts.push(`Brand: ${item.company.name}`);
-    if (item.cpu) hintParts.push(`CPU: ${item.cpu}`);
-    if (item.ram) hintParts.push(`RAM: ${item.ram}`);
+    if (item.type) hintParts.push(`Category: ${item.type.toUpperCase()}`);
+    if (item.type === "laptop" && item.cpu) hintParts.push(`CPU: ${item.cpu}`);
+    if (item.type === "laptop" && item.ram) hintParts.push(`RAM: ${item.ram}`);
     const hintText = hintParts.join(" • ");
     const li = document.createElement("li");
     li.innerHTML = `
@@ -140,14 +141,14 @@ async function loadItems() {
 
   try {
     const ids = baseItems.map((item) => item.id).join(",");
-    const url = new URL(`${API_BASE}/laptops`, window.location.origin);
+    const url = new URL(`${API_BASE}/products`, window.location.origin);
     url.searchParams.set("ids", ids);
-    const laptops = await fetchJSON(url.toString());
+    const products = await fetchJSON(url.toString());
     const merged = baseItems
       .map((entry) => {
-        const laptop = laptops.find((item) => item.id === entry.id);
-        if (!laptop) return null;
-        return { ...laptop, quantity: entry.quantity || 1 };
+        const product = products.find((item) => item.id === entry.id);
+        if (!product) return null;
+        return { ...product, quantity: entry.quantity || 1 };
       })
       .filter(Boolean);
     currentItems = merged;
@@ -174,22 +175,21 @@ async function handleSubmit(event) {
   }
 
   try {
-    for (const item of currentItems) {
-      await fetchJSON(`${API_BASE}/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          laptopId: item.id,
+    await fetchJSON(`${API_BASE}/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: currentItems.map((item) => ({
+          productId: item.id,
           quantity: item.quantity,
-          customerName: data.customerName,
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          paymentType: data.paymentType || "Cash on Delivery",
-          notes: data.notes || "",
-        }),
-      });
-    }
+        })),
+        customerName: data.customerName,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        notes: data.notes || "",
+      }),
+    });
 
     if (mode === "cart") {
       window.Cart.clear();

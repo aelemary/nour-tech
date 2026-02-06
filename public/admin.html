@@ -38,7 +38,7 @@
       <section class="panel">
         <h1>Operations Dashboard</h1>
         <p style="color: var(--text-muted); max-width: 720px;">
-          Launch new brands, publish laptop configurations, and monitor cash-on-delivery orders in real time.
+          Launch new brands, publish products, and monitor cash-on-delivery orders in real time.
           Everything persists to the local JSON datastore, making this perfect for rapid prototyping before
           moving to a production database or payments stack.
         </p>
@@ -48,8 +48,8 @@
             <strong id="stat-admin-brands">0</strong>
           </div>
           <div class="stat-card">
-            <h3>Laptops Listed</h3>
-            <strong id="stat-admin-laptops">0</strong>
+            <h3>Products Listed</h3>
+            <strong id="stat-admin-products">0</strong>
           </div>
           <div class="stat-card">
             <h3>Open COD Orders</h3>
@@ -79,12 +79,23 @@
             <div class="order-status" id="company-status"></div>
           </form>
 
-          <form id="laptop-form" class="panel-lite">
-            <h3>Publish Laptop Listing</h3>
-            <input type="hidden" name="id" id="laptop-id" />
+          <form id="product-form" class="panel-lite">
+            <h3>Publish Product Listing</h3>
+            <input type="hidden" name="id" id="product-id" />
+            <label>
+              Category
+              <select name="category" id="product-category" required>
+                <option value="">Select Category</option>
+                <option value="laptop">Laptop</option>
+                <option value="gpu">GPU</option>
+                <option value="cpu">CPU</option>
+                <option value="hdd">HDD</option>
+                <option value="motherboard">Motherboard</option>
+              </select>
+            </label>
             <label>
               Brand
-              <select name="companyId" id="laptop-company" required>
+              <select name="companyId" id="product-brand" required>
                 <option value="">Select Brand</option>
               </select>
             </label>
@@ -122,33 +133,29 @@
               Currency (ISO)
               <input type="text" name="currency" maxlength="3" placeholder="EGP" />
             </label>
-            <label>
+            <label class="laptop-only">
               GPU
               <input type="text" name="gpu" placeholder="NVIDIA RTX 4080" />
             </label>
-            <label>
+            <label class="laptop-only">
               CPU
               <input type="text" name="cpu" placeholder="Intel Core i9-13980HX" />
             </label>
-            <label>
+            <label class="laptop-only">
               RAM
               <input type="text" name="ram" placeholder="32 GB DDR5" />
             </label>
-            <label>
+            <label class="laptop-only">
               Storage
               <input type="text" name="storage" placeholder="1 TB NVMe SSD" />
             </label>
-            <label>
+            <label class="laptop-only">
               Display
               <input type="text" name="display" placeholder="16&quot; QHD+ 240Hz" />
             </label>
             <label>
               Warranty (years)
               <input type="number" name="warranty" min="0" step="1" placeholder="2" />
-            </label>
-            <label>
-              Stock Count
-              <input type="number" name="stock" min="0" step="1" placeholder="5" />
             </label>
             <label>
               Image Upload
@@ -178,8 +185,8 @@
               ></textarea>
             </label>
             <button type="submit" class="btn btn-primary">Publish Listing</button>
-            <button type="button" class="btn btn-outline" id="laptop-cancel" hidden>Cancel Edit</button>
-            <div class="order-status" id="laptop-status"></div>
+            <button type="button" class="btn btn-outline" id="product-cancel" hidden>Cancel Edit</button>
+            <div class="order-status" id="product-status"></div>
           </form>
         </div>
         <div class="admin-grid" style="margin-top: 1.5rem;">
@@ -188,7 +195,7 @@
             <ul id="company-list" class="chip-list"></ul>
           </div>
           <div class="panel-lite" style="grid-column: span 2;">
-            <h3>Published Laptops</h3>
+            <h3>Published Products</h3>
             <div class="table-scroll">
               <table class="orders-table catalog-table">
                 <thead>
@@ -228,8 +235,7 @@
                 <th>Placed</th>
                 <th>Customer</th>
                 <th>Contact</th>
-                <th>Payment</th>
-                <th>Listing</th>
+                <th>Items</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -269,7 +275,7 @@
     </main>
 
     <footer>
-      Nour Tech &copy; <span id="year"></span>. Trusted laptop sourcing across MENA.
+      Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.
       <br />
       Need a custom configuration? <a href="/contact.html">Talk to the team.</a>
     </footer>

@@ -312,27 +312,51 @@ function mapCompany(record) {
   };
 }
 
-function mapLaptop(record) {
+const PRODUCT_TYPES = {
+  laptop: { table: "laptops", label: "Laptop" },
+  gpu: { table: "gpus", label: "GPU" },
+  cpu: { table: "cpus", label: "CPU" },
+  hdd: { table: "hdds", label: "HDD" },
+  motherboard: { table: "motherboards", label: "Motherboard" },
+};
+
+function normalizeProductType(value = "") {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  if (raw === "laptops") return "laptop";
+  if (raw === "gpus") return "gpu";
+  if (raw === "cpus") return "cpu";
+  if (raw === "hdds") return "hdd";
+  if (raw === "motherboards") return "motherboard";
+  if (PRODUCT_TYPES[raw]) return raw;
+  return "";
+}
+
+function mapProduct(record, type) {
   if (!record) return null;
   const company = record.brands ? mapCompany(record.brands) : null;
-  return {
-    id: record.id,
+  const normalizedType = normalizeProductType(type);
+  const product = {
+    id: record.product_id || record.id,
+    type: normalizedType || type,
     companyId: record.brand_id,
     shortName: record.short_name || "",
     title: record.title,
     price: Number(record.price) || 0,
     currency: "EGP",
-    gpu: record.gpu || "",
-    cpu: record.cpu || "",
-    ram: record.ram || "",
-    storage: record.storage || "",
-    display: record.display || "",
     description: record.description || "",
     images: Array.isArray(record.images) ? record.images : record.images ? [record.images] : [],
-    stock: record.stock ?? 0,
     warranty: record.warranty != null ? Number(record.warranty) : 0,
     company,
   };
+  if (normalizedType === "laptop") {
+    product.gpu = record.gpu || "";
+    product.cpu = record.cpu || "";
+    product.ram = record.ram || "";
+    product.storage = record.storage || "";
+    product.display = record.display || "";
+  }
+  return product;
 }
 
 function mapUser(record) {
@@ -345,13 +369,8 @@ function mapUser(record) {
   };
 }
 
-function mapOrder(record) {
+function mapOrder(record, hydratedItems = []) {
   if (!record) return null;
-  const items = Array.isArray(record.order_items) ? record.order_items : [];
-  const firstItem = items[0];
-  const laptopData = firstItem?.laptops
-    ? mapLaptop({ ...firstItem.laptops, brands: firstItem.laptops.brands })
-    : null;
   return {
     id: record.id,
     userId: record.user_id,
@@ -359,34 +378,38 @@ function mapOrder(record) {
     phone: record.phone || "",
     email: record.email || "",
     address: record.delivery_address,
-    paymentType: "Cash on Delivery",
-    paymentCurrency: "EGP",
     status: record.status,
-    quantity: firstItem?.quantity || 1,
     notes: record.notes || "",
     createdAt: record.created_at,
-    laptop: laptopData,
+    items: hydratedItems,
   };
 }
 
-function filterLaptops(laptops, filters) {
-  return laptops.filter((laptop) => {
+function filterProducts(products, filters) {
+  const normalizedCategory = normalizeProductType(filters.category || filters.type || "");
+  return products.filter((product) => {
     const search = filters.search?.toLowerCase() || "";
+    const companyName = product.company?.name || "";
     const matchesSearch =
       !search ||
-      laptop.title.toLowerCase().includes(search) ||
-      (laptop.description || "").toLowerCase().includes(search) ||
-      (laptop.cpu || "").toLowerCase().includes(search) ||
-      (laptop.ram || "").toLowerCase().includes(search) ||
-      (laptop.storage || "").toLowerCase().includes(search);
-    const matchesCompany = !filters.companyId || laptop.companyId === filters.companyId;
-    const matchesGpu =
-      !filters.gpu || (laptop.gpu || "").toLowerCase().includes(filters.gpu.toLowerCase());
+      product.title.toLowerCase().includes(search) ||
+      (product.shortName || "").toLowerCase().includes(search) ||
+      (product.description || "").toLowerCase().includes(search) ||
+      companyName.toLowerCase().includes(search) ||
+      (product.type || "").toLowerCase().includes(search) ||
+      (product.type === "laptop" &&
+        ((product.gpu || "").toLowerCase().includes(search) ||
+          (product.cpu || "").toLowerCase().includes(search) ||
+          (product.ram || "").toLowerCase().includes(search) ||
+          (product.storage || "").toLowerCase().includes(search) ||
+          (product.display || "").toLowerCase().includes(search)));
+    const matchesCompany = !filters.companyId || product.companyId === filters.companyId;
+    const matchesCategory = !normalizedCategory || product.type === normalizedCategory;
     const matchesIds =
-      !filters.ids || (Array.isArray(filters.ids) && filters.ids.includes(laptop.id));
-    const matchesMin = !filters.minPrice || laptop.price >= Number(filters.minPrice);
-    const matchesMax = !filters.maxPrice || laptop.price <= Number(filters.maxPrice);
-    return matchesSearch && matchesCompany && matchesGpu && matchesIds && matchesMin && matchesMax;
+      !filters.ids || (Array.isArray(filters.ids) && filters.ids.includes(product.id));
+    const matchesMin = !filters.minPrice || product.price >= Number(filters.minPrice);
+    const matchesMax = !filters.maxPrice || product.price <= Number(filters.maxPrice);
+    return matchesSearch && matchesCompany && matchesCategory && matchesIds && matchesMin && matchesMax;
   });
 }
 
@@ -417,6 +440,82 @@ async function fetchContact() {
     address: "Add your office or showroom address here",
     availability: [],
   };
+}
+
+function buildProductSelect(type) {
+  const fields = [
+    "product_id",
+    "brand_id",
+    "title",
+    "price",
+    "description",
+    "images",
+    "warranty",
+    "short_name",
+    "created_at",
+    "brands(*)",
+  ];
+  if (type === "laptop") {
+    fields.push("gpu", "cpu", "ram", "storage", "display");
+  }
+  return fields.join(",");
+}
+
+async function fetchProducts({ ids = [], category = "", companyId = "" } = {}) {
+  const normalizedCategory = normalizeProductType(category);
+  const params = { select: "id,type" };
+  if (ids.length) {
+    params.id = `in.(${ids.join(",")})`;
+  }
+  if (normalizedCategory) {
+    params.type = `eq.${normalizedCategory}`;
+  }
+  const records = await sb("products", { params });
+  if (!records.length) return [];
+  const idsByType = new Map();
+  records.forEach((record) => {
+    const type = normalizeProductType(record.type);
+    if (!type || !PRODUCT_TYPES[type]) return;
+    if (!idsByType.has(type)) {
+      idsByType.set(type, []);
+    }
+    idsByType.get(type).push(record.id);
+  });
+  const output = [];
+  for (const [type, typeIds] of idsByType.entries()) {
+    if (!typeIds.length) continue;
+    const info = PRODUCT_TYPES[type];
+    const tableParams = {
+      select: buildProductSelect(type),
+      order: "title.asc",
+      product_id: `in.(${typeIds.join(",")})`,
+    };
+    if (companyId) {
+      tableParams.brand_id = `eq.${companyId}`;
+    }
+    const rows = await sb(info.table, { params: tableParams });
+    rows.forEach((row) => output.push(mapProduct(row, type)));
+  }
+  return output;
+}
+
+async function hydrateOrders(records = []) {
+  const orderItems = records.flatMap((order) =>
+    Array.isArray(order.order_items) ? order.order_items : []
+  );
+  const productIds = Array.from(
+    new Set(orderItems.map((item) => item.product_id).filter(Boolean))
+  );
+  const products = productIds.length ? await fetchProducts({ ids: productIds }) : [];
+  const productMap = new Map(products.map((product) => [product.id, product]));
+  return records.map((order) => {
+    const items = (order.order_items || []).map((item) => ({
+      productId: item.product_id,
+      quantity: item.quantity || 1,
+      product: productMap.get(item.product_id) || null,
+    }));
+    return mapOrder(order, items);
+  });
 }
 
 function requireAuth(req, res, session, { admin = false } = {}) {
@@ -563,38 +662,71 @@ async function handleApi(req, res, pathname, searchParams) {
         }
         if (method === "DELETE" && slug) {
           if (!requireAuth(req, res, session, { admin: true })) return;
+          const removedProductIds = new Set();
+          const removedImages = [];
+          for (const [type, info] of Object.entries(PRODUCT_TYPES)) {
+            const rows = await sb(info.table, {
+              params: { select: "product_id,images", brand_id: `eq.${slug}` },
+            });
+            rows.forEach((row) => {
+              if (row.product_id) removedProductIds.add(row.product_id);
+              if (row.images) {
+                const images = Array.isArray(row.images) ? row.images : [row.images];
+                images.filter(Boolean).forEach((image) => removedImages.push(image));
+              }
+            });
+            await sb(info.table, { method: "DELETE", params: { brand_id: `eq.${slug}` } });
+          }
+          if (removedProductIds.size) {
+            await sb("products", {
+              method: "DELETE",
+              params: { id: `in.(${Array.from(removedProductIds).join(",")})` },
+            });
+          }
           await sb("brands", { method: "DELETE", params: { id: `eq.${slug}` } });
+          for (const image of removedImages) {
+            try {
+              await deleteStoredImage(image);
+            } catch (error) {
+              console.error("Failed to delete stored image", image, error.message);
+            }
+          }
           reply(200, { success: true });
           return;
         }
         break;
       }
+      case "products":
       case "laptops": {
+        const forcedCategory = resource === "laptops" ? "laptop" : "";
         if (method === "GET" && slug) {
-          const laptops = await sb("laptops", {
-            params: { select: "*,brands(*)", id: `eq.${slug}` },
-          });
-          const record = laptops?.[0];
+          const products = await fetchProducts({ ids: [slug], category: forcedCategory });
+          const record = products?.[0];
           if (!record) {
-            reply(404, { error: "Laptop not found" });
+            reply(404, { error: "Product not found" });
             return;
           }
-          reply(200, mapLaptop(record));
+          reply(200, record);
           return;
         }
         if (method === "GET") {
-          const laptops = await sb("laptops", {
-            params: { select: "*,brands(*)", order: "title.asc" },
-          });
-          const mapped = laptops.map(mapLaptop);
           const idsRaw = (searchParams.get("ids") || "")
             .split(",")
             .map((id) => id.trim())
             .filter(Boolean);
-          const results = filterLaptops(mapped, {
+          const category = normalizeProductType(
+            searchParams.get("category") || searchParams.get("type") || forcedCategory
+          );
+          const companyId = searchParams.get("companyId") || "";
+          const products = await fetchProducts({
+            ids: idsRaw,
+            category,
+            companyId,
+          });
+          const results = filterProducts(products, {
             search: searchParams.get("search") || "",
-            companyId: searchParams.get("companyId") || "",
-            gpu: searchParams.get("gpu") || "",
+            companyId,
+            category,
             ids: idsRaw.length ? idsRaw : null,
             minPrice: searchParams.get("minPrice"),
             maxPrice: searchParams.get("maxPrice"),
@@ -605,8 +737,14 @@ async function handleApi(req, res, pathname, searchParams) {
         if (method === "POST") {
           if (!requireAuth(req, res, session, { admin: true })) return;
           const body = await parseBody(req);
-          if (!body || !body.companyId || !body.title || body.price == null) {
-            reply(400, { error: "Missing companyId, title, or price" });
+          const incomingType = normalizeProductType(body?.category || body?.type || forcedCategory);
+          if (!body || !incomingType || !body.companyId || !body.title || body.price == null) {
+            reply(400, { error: "Missing category, companyId, title, or price" });
+            return;
+          }
+          const info = PRODUCT_TYPES[incomingType];
+          if (!info) {
+            reply(400, { error: "Unsupported product category" });
             return;
           }
           const brands = await sb("brands", { params: { select: "id", id: `eq.${body.companyId}` } });
@@ -614,35 +752,47 @@ async function handleApi(req, res, pathname, searchParams) {
             reply(404, { error: "Brand not found" });
             return;
           }
+          const createdProduct = await sb("products", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: { type: incomingType },
+          });
+          const productRecord = createdProduct?.[0];
+          if (!productRecord) {
+            reply(500, { error: "Failed to create product" });
+            return;
+          }
+          const images = Array.isArray(body.images)
+            ? body.images.filter(Boolean)
+            : typeof body.images === "string" && body.images
+            ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
+            : [];
           const payload = {
+            product_id: productRecord.id,
             brand_id: body.companyId,
             short_name: body.shortName || "",
             title: body.title,
             price: Number(body.price),
-            gpu: body.gpu || "",
-            cpu: body.cpu || "",
-            ram: body.ram || "",
-            storage: body.storage || "",
-            display: body.display || "",
             description: body.description || "",
             warranty: body.warranty != null ? Number(body.warranty) : 0,
-            images: Array.isArray(body.images)
-              ? body.images.filter(Boolean)
-              : typeof body.images === "string" && body.images
-              ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
-              : [],
-            stock: body.stock != null ? Number(body.stock) : 0,
+            images,
           };
-          const created = await sb("laptops", {
+          if (incomingType === "laptop") {
+            payload.gpu = body.gpu || "";
+            payload.cpu = body.cpu || "";
+            payload.ram = body.ram || "";
+            payload.storage = body.storage || "";
+            payload.display = body.display || "";
+          }
+          await sb(info.table, {
             method: "POST",
             headers: { Prefer: "return=representation" },
             body: payload,
           });
-          const record = created?.[0];
-          const hydrated = await sb("laptops", {
-            params: { select: "*,brands(*)", id: `eq.${record.id}` },
+          const hydrated = await sb(info.table, {
+            params: { select: buildProductSelect(incomingType), product_id: `eq.${productRecord.id}` },
           });
-          reply(201, mapLaptop(hydrated?.[0]));
+          reply(201, mapProduct(hydrated?.[0], incomingType));
           return;
         }
         if (method === "PATCH" && slug) {
@@ -652,16 +802,23 @@ async function handleApi(req, res, pathname, searchParams) {
             reply(400, { error: "Missing payload" });
             return;
           }
+          const current = await sb("products", { params: { select: "id,type", id: `eq.${slug}` } });
+          if (!current.length) {
+            reply(404, { error: "Product not found" });
+            return;
+          }
+          const existingType = normalizeProductType(current[0].type);
+          const nextType = normalizeProductType(body.category || body.type || existingType);
+          if (nextType && existingType !== nextType) {
+            reply(400, { error: "Category changes require creating a new product." });
+            return;
+          }
+          const info = PRODUCT_TYPES[existingType];
           const payload = {
             brand_id: body.companyId,
             short_name: body.shortName,
             title: body.title,
             price: body.price != null ? Number(body.price) : undefined,
-            gpu: body.gpu,
-            cpu: body.cpu,
-            ram: body.ram,
-            storage: body.storage,
-            display: body.display,
             description: body.description,
             warranty: body.warranty != null ? Number(body.warranty) : undefined,
             images: Array.isArray(body.images)
@@ -669,8 +826,14 @@ async function handleApi(req, res, pathname, searchParams) {
               : typeof body.images === "string" && body.images
               ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
               : undefined,
-            stock: body.stock != null ? Number(body.stock) : undefined,
           };
+          if (existingType === "laptop") {
+            payload.gpu = body.gpu;
+            payload.cpu = body.cpu;
+            payload.ram = body.ram;
+            payload.storage = body.storage;
+            payload.display = body.display;
+          }
           Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
           if (payload.brand_id) {
             const brands = await sb("brands", { params: { select: "id", id: `eq.${payload.brand_id}` } });
@@ -679,29 +842,37 @@ async function handleApi(req, res, pathname, searchParams) {
               return;
             }
           }
-          await sb("laptops", {
+          await sb(info.table, {
             method: "PATCH",
-            params: { id: `eq.${slug}` },
+            params: { product_id: `eq.${slug}` },
             headers: { Prefer: "return=representation" },
             body: payload,
           });
-          const hydrated = await sb("laptops", {
-            params: { select: "*,brands(*)", id: `eq.${slug}` },
+          const hydrated = await sb(info.table, {
+            params: { select: buildProductSelect(existingType), product_id: `eq.${slug}` },
           });
           if (!hydrated.length) {
-            reply(404, { error: "Laptop not found" });
+            reply(404, { error: "Product not found" });
             return;
           }
-          reply(200, mapLaptop(hydrated?.[0]));
+          reply(200, mapProduct(hydrated?.[0], existingType));
           return;
         }
         if (method === "DELETE" && slug) {
           if (!requireAuth(req, res, session, { admin: true })) return;
-          const laptops = await sb("laptops", {
-            params: { select: "id,images", id: `eq.${slug}` },
+          const current = await sb("products", { params: { select: "id,type", id: `eq.${slug}` } });
+          if (!current.length) {
+            reply(404, { error: "Product not found" });
+            return;
+          }
+          const existingType = normalizeProductType(current[0].type);
+          const info = PRODUCT_TYPES[existingType];
+          const records = await sb(info.table, {
+            params: { select: "product_id,images", product_id: `eq.${slug}` },
           });
-          const record = laptops?.[0];
-          await sb("laptops", { method: "DELETE", params: { id: `eq.${slug}` } });
+          const record = records?.[0];
+          await sb(info.table, { method: "DELETE", params: { product_id: `eq.${slug}` } });
+          await sb("products", { method: "DELETE", params: { id: `eq.${slug}` } });
           if (record?.images) {
             const images = Array.isArray(record.images) ? record.images : [record.images];
             for (const image of images.filter(Boolean)) {
@@ -721,7 +892,7 @@ async function handleApi(req, res, pathname, searchParams) {
         if (method === "GET") {
           if (!requireAuth(req, res, session)) return;
           const params = {
-            select: "*,order_items(*,laptops(*,brands(*)))",
+            select: "*,order_items(*)",
             order: "created_at.desc",
           };
           if (session.role !== "admin") {
@@ -732,21 +903,42 @@ async function handleApi(req, res, pathname, searchParams) {
             params.status = `eq.${statusFilter}`;
           }
           const records = await sb("orders", { params });
-          reply(200, records.map(mapOrder));
+          const hydrated = await hydrateOrders(records);
+          reply(200, hydrated);
           return;
         }
         if (method === "POST") {
           if (!requireAuth(req, res, session)) return;
           const body = await parseBody(req);
-          if (!body || !body.laptopId || !body.phone || !body.address) {
-            reply(400, { error: "Missing laptopId, phone, or address" });
+          const items = Array.isArray(body?.items)
+            ? body.items
+            : body?.productId || body?.laptopId
+            ? [
+                {
+                  productId: body.productId || body.laptopId,
+                  quantity: body.quantity != null ? Number(body.quantity) : 1,
+                },
+              ]
+            : [];
+          if (!body || !items.length || !body.phone || !body.address) {
+            reply(400, { error: "Missing items, phone, or address" });
             return;
           }
-          const laptops = await sb("laptops", {
-            params: { select: "id", id: `eq.${body.laptopId}` },
-          });
-          if (!laptops.length) {
-            reply(404, { error: "Laptop not found" });
+          const productIds = Array.from(
+            new Set(
+              items
+                .map((item) => item.productId || item.id)
+                .map((id) => String(id || "").trim())
+                .filter(Boolean)
+            )
+          );
+          if (!productIds.length) {
+            reply(400, { error: "Missing product IDs" });
+            return;
+          }
+          const products = await fetchProducts({ ids: productIds });
+          if (products.length !== productIds.length) {
+            reply(404, { error: "One or more products were not found" });
             return;
           }
           const orderPayload = {
@@ -763,22 +955,28 @@ async function handleApi(req, res, pathname, searchParams) {
             body: orderPayload,
           });
           const orderRecord = createdOrder?.[0];
+          if (!orderRecord) {
+            reply(500, { error: "Failed to create order" });
+            return;
+          }
+          const orderItemsPayload = items.map((item) => ({
+            order_id: orderRecord.id,
+            product_id: item.productId || item.id,
+            quantity: item.quantity != null ? Math.max(1, Number(item.quantity)) : 1,
+          }));
           await sb("order_items", {
             method: "POST",
             headers: { Prefer: "return=representation" },
-            body: {
-              order_id: orderRecord.id,
-              laptop_id: body.laptopId,
-              quantity: body.quantity != null ? Math.max(1, Number(body.quantity)) : 1,
-            },
+            body: orderItemsPayload,
           });
           const hydrated = await sb("orders", {
             params: {
-              select: "*,order_items(*,laptops(*,brands(*)))",
+              select: "*,order_items(*)",
               id: `eq.${orderRecord.id}`,
             },
           });
-          reply(201, mapOrder(hydrated?.[0]));
+          const hydratedOrders = await hydrateOrders(hydrated);
+          reply(201, hydratedOrders?.[0] || null);
           return;
         }
         if (method === "PATCH" && slug) {
@@ -795,13 +993,14 @@ async function handleApi(req, res, pathname, searchParams) {
             body: { status: body.status },
           });
           const hydrated = await sb("orders", {
-            params: { select: "*,order_items(*,laptops(*,brands(*)))", id: `eq.${slug}` },
+            params: { select: "*,order_items(*)", id: `eq.${slug}` },
           });
           if (!hydrated.length) {
             reply(404, { error: "Order not found" });
             return;
           }
-          reply(200, mapOrder(hydrated?.[0]));
+          const hydratedOrders = await hydrateOrders(hydrated);
+          reply(200, hydratedOrders?.[0] || null);
           return;
         }
         break;

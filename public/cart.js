@@ -82,11 +82,16 @@ function renderCart(items) {
     total += lineTotal;
     const hintParts = [];
     if (item.company?.name) hintParts.push(`Brand: ${item.company.name}`);
-    if (item.cpu) hintParts.push(`CPU: ${item.cpu}`);
-    if (item.ram) hintParts.push(`RAM: ${item.ram}`);
+    if (item.type) hintParts.push(`Category: ${item.type.toUpperCase()}`);
+    if (item.type === "laptop" && item.cpu) hintParts.push(`CPU: ${item.cpu}`);
+    if (item.type === "laptop" && item.ram) hintParts.push(`RAM: ${item.ram}`);
     const hintText = hintParts.join(" • ");
     const row = document.createElement("tr");
-    const image = item.images?.[0] || "https://placehold.co/160x120?text=Laptop";
+    const image =
+      item.images?.[0] ||
+      `https://placehold.co/160x120?text=${encodeURIComponent(
+        item.type ? item.type.toUpperCase() : "Product"
+      )}`;
     row.innerHTML = `
       <td>
         <div class="cart-item">
@@ -134,14 +139,14 @@ async function loadCart() {
 
   try {
     const ids = stored.map((entry) => entry.id).join(",");
-    const url = new URL(`${API_BASE}/laptops`, window.location.origin);
+    const url = new URL(`${API_BASE}/products`, window.location.origin);
     url.searchParams.set("ids", ids);
-    const laptops = await fetchJSON(url.toString());
+    const products = await fetchJSON(url.toString());
     const merged = stored
       .map((entry) => {
-        const laptop = laptops.find((item) => item.id === entry.id);
-        if (!laptop) return null;
-        return { ...laptop, quantity: entry.quantity || 1 };
+        const product = products.find((item) => item.id === entry.id);
+        if (!product) return null;
+        return { ...product, quantity: entry.quantity || 1 };
       })
       .filter(Boolean);
     currentItems = merged;

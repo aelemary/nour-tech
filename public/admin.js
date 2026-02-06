@@ -2,14 +2,14 @@ const API_BASE = "/api";
 
 const state = {
   companies: [],
-  laptops: [],
+  products: [],
   orders: [],
   orderFilter: "",
   users: [],
   userSearch: "",
 };
 let bootstrapped = false;
-let editingLaptopId = null;
+let editingProductId = null;
 
 function redirectToLogin() {
   const target = `/login.html?next=${encodeURIComponent("/admin.html")}`;
@@ -118,7 +118,7 @@ function renderImagePreview(urls) {
     wrapper.className = "image-chip";
     const img = document.createElement("img");
     img.src = url;
-    img.alt = "Laptop image";
+    img.alt = "Product image";
     const button = document.createElement("button");
     button.type = "button";
     button.dataset.removeImage = url;
@@ -132,7 +132,7 @@ function renderImagePreview(urls) {
 }
 
 function appendImageUrl(url) {
-  const textarea = document.querySelector('#laptop-form textarea[name="images"]');
+  const textarea = document.querySelector('#product-form textarea[name="images"]');
   if (!textarea) return;
   const existing = parseImageList(textarea.value);
   if (!existing.includes(url)) {
@@ -143,62 +143,81 @@ function appendImageUrl(url) {
 }
 
 function syncImagePreview() {
-  const textarea = document.querySelector('#laptop-form textarea[name="images"]');
+  const textarea = document.querySelector('#product-form textarea[name="images"]');
   if (!textarea) return;
   renderImagePreview(parseImageList(textarea.value));
 }
 
-function resetLaptopForm() {
-  const form = document.getElementById("laptop-form");
+function toggleCategoryFields(categoryValue) {
+  const category = String(categoryValue || "").toLowerCase();
+  document.querySelectorAll(".laptop-only").forEach((field) => {
+    field.hidden = category && category !== "laptop";
+  });
+}
+
+function resetProductForm() {
+  const form = document.getElementById("product-form");
   if (!form) return;
   form.reset();
   const idInput = form.querySelector('input[name="id"]');
   if (idInput) {
     idInput.value = "";
   }
-  editingLaptopId = null;
+  editingProductId = null;
   const submitButton = form.querySelector("button[type='submit']");
   if (submitButton) {
     submitButton.textContent = "Publish Listing";
   }
-  const cancelButton = document.getElementById("laptop-cancel");
+  const cancelButton = document.getElementById("product-cancel");
   if (cancelButton) {
     cancelButton.hidden = true;
   }
   renderImagePreview([]);
+  const categorySelect = form.querySelector('select[name="category"]');
+  if (categorySelect) {
+    categorySelect.disabled = false;
+    toggleCategoryFields(categorySelect.value);
+  } else {
+    toggleCategoryFields("");
+  }
 }
 
-function startEditingLaptop(laptopId) {
-  const laptop = state.laptops.find((item) => item.id === laptopId);
-  if (!laptop) return;
-  const form = document.getElementById("laptop-form");
+function startEditingProduct(productId) {
+  const product = state.products.find((item) => item.id === productId);
+  if (!product) return;
+  const form = document.getElementById("product-form");
   if (!form) return;
-  editingLaptopId = laptopId;
+  editingProductId = productId;
   const idInput = form.querySelector('input[name="id"]');
-  if (idInput) idInput.value = laptop.id;
+  if (idInput) idInput.value = product.id;
+  const categorySelect = form.querySelector('select[name="category"]');
+  if (categorySelect) {
+    categorySelect.value = product.type || "";
+    categorySelect.disabled = true;
+  }
   const companySelect = form.querySelector('select[name="companyId"]');
-  if (companySelect) companySelect.value = laptop.companyId || "";
-  form.querySelector('input[name="title"]').value = laptop.title || "";
+  if (companySelect) companySelect.value = product.companyId || "";
+  form.querySelector('input[name="title"]').value = product.title || "";
   const shortNameInput = form.querySelector('input[name="shortName"]');
-  if (shortNameInput) shortNameInput.value = laptop.shortName || "";
-  form.querySelector('input[name="price"]').value = laptop.price ?? "";
-  form.querySelector('input[name="gpu"]').value = laptop.gpu || "";
-  form.querySelector('input[name="cpu"]').value = laptop.cpu || "";
-  form.querySelector('input[name="ram"]').value = laptop.ram || "";
-  form.querySelector('input[name="storage"]').value = laptop.storage || "";
-  form.querySelector('input[name="display"]').value = laptop.display || "";
-  form.querySelector('input[name="stock"]').value = laptop.stock ?? "";
+  if (shortNameInput) shortNameInput.value = product.shortName || "";
+  form.querySelector('input[name="price"]').value = product.price ?? "";
+  form.querySelector('input[name="gpu"]').value = product.gpu || "";
+  form.querySelector('input[name="cpu"]').value = product.cpu || "";
+  form.querySelector('input[name="ram"]').value = product.ram || "";
+  form.querySelector('input[name="storage"]').value = product.storage || "";
+  form.querySelector('input[name="display"]').value = product.display || "";
   const warrantyInput = form.querySelector('input[name="warranty"]');
-  if (warrantyInput) warrantyInput.value = laptop.warranty ?? "";
-  form.querySelector('textarea[name="description"]').value = laptop.description || "";
+  if (warrantyInput) warrantyInput.value = product.warranty ?? "";
+  form.querySelector('textarea[name="description"]').value = product.description || "";
   const imagesTextarea = form.querySelector('textarea[name="images"]');
-  imagesTextarea.value = (laptop.images || []).join("\n");
-  renderImagePreview(laptop.images || []);
+  imagesTextarea.value = (product.images || []).join("\n");
+  renderImagePreview(product.images || []);
   const submitButton = form.querySelector("button[type='submit']");
   if (submitButton) submitButton.textContent = "Update Listing";
-  const cancelButton = document.getElementById("laptop-cancel");
+  const cancelButton = document.getElementById("product-cancel");
   if (cancelButton) cancelButton.hidden = false;
-  showStatus("laptop-status", `Editing ${laptop.title}`);
+  showStatus("product-status", `Editing ${product.title}`);
+  toggleCategoryFields(product.type || "");
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -232,7 +251,7 @@ function populateCompanySelect(elementId) {
 
 function updateStats() {
   document.getElementById("stat-admin-brands").textContent = state.companies.length;
-  document.getElementById("stat-admin-laptops").textContent = state.laptops.length;
+  document.getElementById("stat-admin-products").textContent = state.products.length;
   const pending = state.orders.filter(
     (order) => order.status !== "completed" && order.status !== "cancelled"
   ).length;
@@ -257,7 +276,7 @@ function renderOrders(orders) {
   if (!orders.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 7;
+    cell.colSpan = 6;
     cell.style.textAlign = "center";
     cell.style.color = "var(--text-muted)";
     cell.textContent = "No orders to display right now.";
@@ -269,18 +288,27 @@ function renderOrders(orders) {
   orders.forEach((order) => {
     const row = document.createElement("tr");
     const contact = [order.phone, order.email].filter(Boolean).join(" • ");
-    const quantityLabel = order.quantity ? ` • Qty ${order.quantity}` : "";
-    const laptopLabel = order.laptop
-      ? `${order.laptop.title} (${order.laptop.currency || "EGP"} ${order.laptop.price})${quantityLabel}`
-      : `Listing removed${quantityLabel}`;
+    const items = Array.isArray(order.items) ? order.items : [];
+    const itemLines = items
+      .map((item) => {
+        const product = item.product;
+        const quantity = item.quantity || 1;
+        if (!product) return `<div>Product removed <span class="field-hint">×${quantity}</span></div>`;
+        const price = new Intl.NumberFormat("en-EG", {
+          style: "currency",
+          currency: product.currency || "EGP",
+          maximumFractionDigits: 0,
+        }).format(product.price);
+        return `<div>${product.title} (${price}) <span class="field-hint">×${quantity}</span></div>`;
+      })
+      .join("");
     const statusLabel = getStatusLabel(order.status);
     row.innerHTML = `
       <td>${order.id}</td>
       <td>${formatDate(order.createdAt)}</td>
       <td>${order.customerName}</td>
       <td>${contact || "—"}</td>
-      <td>${order.paymentType}</td>
-      <td>${laptopLabel}</td>
+      <td>${itemLines || "No items"}</td>
       <td data-status-cell="${order.id}"></td>
     `;
     const statusCell = row.querySelector(`[data-status-cell="${order.id}"]`);
@@ -300,7 +328,7 @@ function renderOrders(orders) {
       `;
     }
     if (order.notes) {
-      const listingCell = row.cells[5];
+      const listingCell = row.cells[4];
       if (listingCell) {
         const note = document.createElement("div");
         note.className = "field-hint";
@@ -339,11 +367,11 @@ function renderCompanyList() {
     });
 }
 
-function renderLaptopCatalog() {
+function renderCatalog() {
   const tbody = document.getElementById("catalog-body");
   if (!tbody) return;
   tbody.innerHTML = "";
-  if (!state.laptops.length) {
+  if (!state.products.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 3;
@@ -355,25 +383,28 @@ function renderLaptopCatalog() {
     return;
   }
   const fragment = document.createDocumentFragment();
-  state.laptops
+  state.products
     .slice()
     .sort((a, b) => a.title.localeCompare(b.title))
-    .forEach((laptop) => {
-      const company = state.companies.find((item) => item.id === laptop.companyId);
-    const warrantyLabel = laptop.warranty ? `${laptop.warranty} yr${laptop.warranty > 1 ? "s" : ""} warranty` : "";
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td><strong>${laptop.title}</strong><div class="field-hint">${company ? company.name : "—"}</div>${
+    .forEach((product) => {
+      const company = state.companies.find((item) => item.id === product.companyId);
+      const warrantyLabel = product.warranty
+        ? `${product.warranty} yr${product.warranty > 1 ? "s" : ""} warranty`
+        : "";
+      const typeLabel = product.type ? product.type.toUpperCase() : "PRODUCT";
+      const row = document.createElement("tr");
+      row.innerHTML = `
+      <td><strong>${product.title}</strong><div class="field-hint">${company ? company.name : "—"} • ${typeLabel}</div>${
         warrantyLabel ? `<div class="field-hint">${warrantyLabel}</div>` : ""
       }</td>
       <td>${new Intl.NumberFormat("en-EG", {
         style: "currency",
-        currency: laptop.currency || "EGP",
+        currency: product.currency || "EGP",
         maximumFractionDigits: 0,
-      }).format(laptop.price)}</td>
+      }).format(product.price)}</td>
       <td>
-        <button class="link-button" data-edit-laptop="${laptop.id}">Edit</button>
-        <button class="link-button" data-delete-laptop="${laptop.id}">Remove</button>
+        <button class="link-button" data-edit-product="${product.id}">Edit</button>
+        <button class="link-button" data-delete-product="${product.id}">Remove</button>
       </td>
     `;
       fragment.appendChild(row);
@@ -451,16 +482,20 @@ async function deleteCompany(companyId) {
       method: "DELETE",
     });
     state.companies = state.companies.filter((item) => item.id !== companyId);
-    const removedLaptopIds = new Set(
-      state.laptops.filter((item) => item.companyId === companyId).map((item) => item.id)
+    const removedProductIds = new Set(
+      state.products.filter((item) => item.companyId === companyId).map((item) => item.id)
     );
-    state.laptops = state.laptops.filter((item) => item.companyId !== companyId);
-    state.orders = state.orders.map((order) =>
-      removedLaptopIds.has(order.laptopId) ? { ...order, laptop: null } : order
-    );
-    populateCompanySelect("laptop-company");
+    state.products = state.products.filter((item) => item.companyId !== companyId);
+    state.orders = state.orders.map((order) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      const updatedItems = items.map((item) =>
+        removedProductIds.has(item.productId) ? { ...item, product: null } : item
+      );
+      return { ...order, items: updatedItems };
+    });
+    populateCompanySelect("product-brand");
     renderCompanyList();
-    renderLaptopCatalog();
+    renderCatalog();
     const filteredOrders = state.orderFilter
       ? state.orders.filter((order) => order.status === state.orderFilter)
       : state.orders;
@@ -474,33 +509,37 @@ async function deleteCompany(companyId) {
   }
 }
 
-async function deleteLaptop(laptopId) {
-  if (!laptopId) return;
-  const laptop = state.laptops.find((item) => item.id === laptopId);
-  const confirmed = window.confirm(`Delete listing "${laptop ? laptop.title : laptopId}"?`);
+async function deleteProduct(productId) {
+  if (!productId) return;
+  const product = state.products.find((item) => item.id === productId);
+  const confirmed = window.confirm(`Delete listing "${product ? product.title : productId}"?`);
   if (!confirmed) return;
   try {
-    await fetchJSON(`${API_BASE}/laptops/${encodeURIComponent(laptopId)}`, {
+    await fetchJSON(`${API_BASE}/products/${encodeURIComponent(productId)}`, {
       method: "DELETE",
     });
-    state.laptops = state.laptops.filter((item) => item.id !== laptopId);
-    renderLaptopCatalog();
-    if (editingLaptopId === laptopId) {
-      resetLaptopForm();
+    state.products = state.products.filter((item) => item.id !== productId);
+    renderCatalog();
+    if (editingProductId === productId) {
+      resetProductForm();
     }
-    state.orders = state.orders.map((order) =>
-      order.laptopId === laptopId ? { ...order, laptop: null } : order
-    );
+    state.orders = state.orders.map((order) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      const updatedItems = items.map((item) =>
+        item.productId === productId ? { ...item, product: null } : item
+      );
+      return { ...order, items: updatedItems };
+    });
     const filteredOrders = state.orderFilter
       ? state.orders.filter((order) => order.status === state.orderFilter)
       : state.orders;
     renderOrders(filteredOrders);
     renderUsersList(state.userSearch);
     updateStats();
-    showStatus("laptop-status", "Listing removed.");
+    showStatus("product-status", "Listing removed.");
   } catch (error) {
     console.error(error);
-    showStatus("laptop-status", "Could not delete listing.", "error");
+    showStatus("product-status", "Could not delete listing.", "error");
   }
 }
 
@@ -631,14 +670,14 @@ async function refreshUsers({ quiet = false } = {}) {
 
 async function bootstrap() {
   try {
-    const [companies, laptops, orders, users] = await Promise.all([
+    const [companies, products, orders, users] = await Promise.all([
       fetchJSON(`${API_BASE}/companies`),
-      fetchJSON(`${API_BASE}/laptops`),
+      fetchJSON(`${API_BASE}/products`),
       fetchJSON(`${API_BASE}/orders`),
       fetchJSON(`${API_BASE}/users`),
     ]);
     state.companies = companies;
-    state.laptops = laptops;
+    state.products = products;
     state.orders = orders;
     state.users = users.map((user) => ({
       id: user.id,
@@ -648,9 +687,9 @@ async function bootstrap() {
     }));
     state.userSearch = "";
     state.orderFilter = "";
-    populateCompanySelect("laptop-company");
+    populateCompanySelect("product-brand");
     renderCompanyList();
-    renderLaptopCatalog();
+    renderCatalog();
     renderOrders(orders);
     renderUsersList();
     showStatus("company-status", "");
@@ -684,7 +723,7 @@ async function handleCompanySubmit(event) {
       body: JSON.stringify(payload),
     });
     state.companies.push(company);
-    populateCompanySelect("laptop-company");
+    populateCompanySelect("product-brand");
     renderCompanyList();
     updateStats();
     showStatus("company-status", `Brand ${company.name} added.`);
@@ -702,11 +741,11 @@ async function handleCompanySubmit(event) {
 async function handleImageUpload(file) {
   if (!file) return;
   if (file.size > MAX_UPLOAD_SIZE) {
-    showStatus("laptop-status", "Image exceeds 5MB limit.", "error");
+    showStatus("product-status", "Image exceeds 5MB limit.", "error");
     return;
   }
   try {
-    showStatus("laptop-status", "Uploading image…");
+    showStatus("product-status", "Uploading image…");
     const dataUrl = await readFileAsDataURL(file);
     const result = await fetchJSON(`${API_BASE}/uploads`, {
       method: "POST",
@@ -717,18 +756,18 @@ async function handleImageUpload(file) {
       }),
     });
     appendImageUrl(result.url);
-    showStatus("laptop-status", "Image uploaded and attached.");
+    showStatus("product-status", "Image uploaded and attached.");
   } catch (error) {
     console.error(error);
     if (error.status === 401 || error.status === 403) {
-      showStatus("laptop-status", "Admin access required to upload images.", "error");
+      showStatus("product-status", "Admin access required to upload images.", "error");
     } else {
-      showStatus("laptop-status", "Couldn't upload image.", "error");
+      showStatus("product-status", "Couldn't upload image.", "error");
     }
   }
 }
 
-async function handleLaptopSubmit(event) {
+async function handleProductSubmit(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const formData = new FormData(form);
@@ -736,11 +775,9 @@ async function handleLaptopSubmit(event) {
   const editId = payload.id ? payload.id.trim() : "";
   delete payload.id;
   payload.shortName = payload.shortName ? payload.shortName.trim() : "";
+  payload.category = payload.category ? payload.category.trim().toLowerCase() : "";
   if (payload.price !== undefined && payload.price !== "") {
     payload.price = Number(payload.price);
-  }
-  if (payload.stock !== undefined && payload.stock !== "") {
-    payload.stock = Number(payload.stock);
   }
   if (payload.warranty !== undefined && payload.warranty !== "") {
     payload.warranty = Number(payload.warranty);
@@ -748,31 +785,41 @@ async function handleLaptopSubmit(event) {
     payload.warranty = 0;
   }
   payload.images = parseImageList(payload.images);
+  if (payload.category !== "laptop") {
+    delete payload.gpu;
+    delete payload.cpu;
+    delete payload.ram;
+    delete payload.storage;
+    delete payload.display;
+  }
   try {
-    showStatus("laptop-status", editId ? "Updating listing…" : "Publishing listing…");
-    const endpoint = editId ? `${API_BASE}/laptops/${encodeURIComponent(editId)}` : `${API_BASE}/laptops`;
+    showStatus("product-status", editId ? "Updating listing…" : "Publishing listing…");
+    const endpoint = editId ? `${API_BASE}/products/${encodeURIComponent(editId)}` : `${API_BASE}/products`;
     const method = editId ? "PATCH" : "POST";
-    const laptop = await fetchJSON(endpoint, {
+    const product = await fetchJSON(endpoint, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const index = state.laptops.findIndex((item) => item.id === laptop.id);
+    const index = state.products.findIndex((item) => item.id === product.id);
     if (index === -1) {
-      state.laptops.push(laptop);
+      state.products.push(product);
     } else {
-      state.laptops[index] = laptop;
+      state.products[index] = product;
     }
-    renderLaptopCatalog();
+    renderCatalog();
     updateStats();
-    showStatus("laptop-status", editId ? `Listing ${laptop.title} updated.` : `Listing ${laptop.title} is live.`);
-    resetLaptopForm();
+    showStatus(
+      "product-status",
+      editId ? `Listing ${product.title} updated.` : `Listing ${product.title} is live.`
+    );
+    resetProductForm();
   } catch (error) {
     console.error(error);
     if (error.status === 401 || error.status === 403) {
-      showStatus("laptop-status", "Admin access required to publish listings.", "error");
+      showStatus("product-status", "Admin access required to publish listings.", "error");
     } else {
-      showStatus("laptop-status", "Couldn't publish listing.", "error");
+      showStatus("product-status", "Couldn't publish listing.", "error");
     }
   }
 }
@@ -781,23 +828,27 @@ document.addEventListener("DOMContentLoaded", () => {
   setYear();
 
   const companyForm = document.getElementById("company-form");
-  const laptopForm = document.getElementById("laptop-form");
+  const productForm = document.getElementById("product-form");
   const orderFilter = document.getElementById("order-status-filter");
   const uploadButton = document.getElementById("image-upload-button");
   const imageFileInput = document.getElementById("image-file-input");
-  const imagesTextarea = document.querySelector('#laptop-form textarea[name="images"]');
+  const imagesTextarea = document.querySelector('#product-form textarea[name="images"]');
   const imagePreview = document.getElementById("image-preview");
   const companyList = document.getElementById("company-list");
   const catalogBody = document.getElementById("catalog-body");
   const ordersBody = document.getElementById("orders-body");
   const userSearchInput = document.getElementById("user-search");
   const usersBody = document.getElementById("users-body");
-  const cancelEditButton = document.getElementById("laptop-cancel");
+  const cancelEditButton = document.getElementById("product-cancel");
+  const categorySelect = document.getElementById("product-category");
 
   if (companyForm) companyForm.addEventListener("submit", handleCompanySubmit);
-  if (laptopForm) laptopForm.addEventListener("submit", handleLaptopSubmit);
+  if (productForm) productForm.addEventListener("submit", handleProductSubmit);
   if (cancelEditButton) {
-    cancelEditButton.addEventListener("click", () => resetLaptopForm());
+    cancelEditButton.addEventListener("click", () => resetProductForm());
+  }
+  if (categorySelect) {
+    categorySelect.addEventListener("change", (event) => toggleCategoryFields(event.target.value));
   }
   if (orderFilter) {
     orderFilter.addEventListener("change", (event) => {
@@ -832,7 +883,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  resetLaptopForm();
+  resetProductForm();
   if (companyList) {
     companyList.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-delete-company]");
@@ -842,14 +893,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (catalogBody) {
     catalogBody.addEventListener("click", (event) => {
-      const editButton = event.target.closest("button[data-edit-laptop]");
+      const editButton = event.target.closest("button[data-edit-product]");
       if (editButton) {
-        startEditingLaptop(editButton.dataset.editLaptop);
+        startEditingProduct(editButton.dataset.editProduct);
         return;
       }
-      const deleteButton = event.target.closest("button[data-delete-laptop]");
+      const deleteButton = event.target.closest("button[data-delete-product]");
       if (deleteButton) {
-        deleteLaptop(deleteButton.dataset.deleteLaptop);
+        deleteProduct(deleteButton.dataset.deleteProduct);
       }
     });
   }

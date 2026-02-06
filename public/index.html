@@ -38,9 +38,9 @@
       <section class="panel" id="inventory">
         <div class="inventory-header">
           <div>
-            <h1>Available Laptops</h1>
+            <h1>Available Products</h1>
             <p class="inventory-subtitle">
-              Search the live Nour Tech catalog and narrow by brand, GPU, or price band.
+              Search the live Nour Tech catalog and filter by brand, category, or price band.
             </p>
           </div>
           <form id="filter-form" class="filters-form">
@@ -50,19 +50,24 @@
                 type="search"
                 id="search"
                 name="search"
-                placeholder="Search by title, GPU, RAM, or storage…"
+                placeholder="Search by title, brand, or specs…"
               />
+            </label>
+            <label>
+              Category
+              <select id="filter-category" name="category">
+                <option value="">All categories</option>
+                <option value="laptop">Laptops</option>
+                <option value="gpu">GPUs</option>
+                <option value="cpu">CPUs</option>
+                <option value="hdd">HDDs</option>
+                <option value="motherboard">Motherboards</option>
+              </select>
             </label>
             <label>
               Brand
               <select id="filter-company" name="companyId">
                 <option value="">Any brand</option>
-              </select>
-            </label>
-            <label>
-              GPU
-              <select id="filter-gpu" name="gpu">
-                <option value="">Any GPU</option>
               </select>
             </label>
             <div class="inline-field">
@@ -82,7 +87,7 @@
           </form>
         </div>
         <div id="inventory-status" class="order-status"></div>
-        <div id="results" class="laptop-grid"></div>
+        <div id="results" class="catalog-stack"></div>
         <div id="empty" class="empty-state" hidden>
           Nothing matched that search. Try a different keyword or come back soon for fresh stock.
         </div>
@@ -90,7 +95,7 @@
     </main>
 
     <footer>
-      Nour Tech &copy; <span id="year"></span>. Trusted laptop sourcing across MENA.
+      Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.
       <br />
       Need a custom configuration? <a href="/contact.html">Talk to the team.</a>
     </footer>

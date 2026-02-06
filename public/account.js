@@ -46,7 +46,7 @@ function renderOrders(orders) {
 
   if (!orders.length) {
     wrapper.hidden = true;
-    showStatus("No orders yet. Head back to the catalog to reserve your next laptop.");
+    showStatus("No orders yet. Head back to the catalog to reserve your next product.");
     return;
   }
 
@@ -57,14 +57,18 @@ function renderOrders(orders) {
   const fragment = document.createDocumentFragment();
   orders.forEach((order) => {
     const row = document.createElement("tr");
-    const laptopTitle = order.laptop ? order.laptop.title : "Listing removed";
-    const currency = order.laptop?.currency || order.paymentCurrency || "EGP";
+    const items = Array.isArray(order.items) ? order.items : [];
+    const firstItem = items[0];
+    const productTitle = firstItem?.product ? firstItem.product.title : "Product removed";
+    const currency = firstItem?.product?.currency || "EGP";
     const statusLabel = order.status
       ? order.status.charAt(0).toUpperCase() + order.status.slice(1)
       : "";
-    const priceDisplay = order.laptop
-      ? formatCurrency(order.laptop.price, currency)
+    const priceDisplay = firstItem?.product
+      ? formatCurrency(firstItem.product.price, currency)
       : "No longer available";
+    const quantityTotal = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const itemCountLabel = items.length > 1 ? ` +${items.length - 1} more` : "";
     row.innerHTML = `
       <td>${order.id}</td>
       <td>${new Intl.DateTimeFormat("en-EG", {
@@ -72,12 +76,11 @@ function renderOrders(orders) {
         timeStyle: "short",
       }).format(new Date(order.createdAt))}</td>
       <td>
-        <div><strong>${laptopTitle}</strong></div>
+        <div><strong>${productTitle}</strong>${itemCountLabel}</div>
         <div class="field-hint">${priceDisplay}</div>
       </td>
-      <td>${order.quantity || 1}</td>
+      <td>${quantityTotal || 1}</td>
       <td><span class="status-pill ${order.status}">${statusLabel}</span></td>
-      <td>${order.paymentType}</td>
     `;
     fragment.appendChild(row);
   });
