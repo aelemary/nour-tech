@@ -8,6 +8,16 @@ const TYPE_LABELS = {
   motherboard: "Motherboard",
 };
 
+function formatTypeLabel(type) {
+  const normalized = String(type || "").trim().toLowerCase();
+  if (!normalized) return "Product";
+  if (TYPE_LABELS[normalized]) return TYPE_LABELS[normalized];
+  if (normalized === "ram") return "RAM";
+  return normalized
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 async function fetchJSON(url, options = {}) {
   const response = await fetch(url, { credentials: "include", ...options });
   if (!response.ok) {
@@ -72,6 +82,39 @@ function renderSpec(label, value) {
   return `<div class="spec-item"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
+function humanizeSpecKey(key) {
+  return String(key || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function flattenSpecs(value, trail = [], items = [], limit = 120) {
+  if (items.length >= limit || value == null || value === "") return items;
+  if (Array.isArray(value)) {
+    value.forEach((entry) => {
+      if (items.length >= limit) return;
+      flattenSpecs(entry, trail, items, limit);
+    });
+    return items;
+  }
+  if (typeof value === "object") {
+    Object.entries(value).forEach(([key, entry]) => {
+      if (items.length >= limit || entry == null || entry === "") return;
+      flattenSpecs(entry, trail.concat(humanizeSpecKey(key)), items, limit);
+    });
+    return items;
+  }
+  if (!trail.length) return items;
+  items.push({
+    label: trail.join(" / "),
+    value: String(value),
+  });
+  return items;
+}
+
 function showStatus(message, type = "success") {
   const container = document.getElementById("order-status");
   if (!container) return;
@@ -86,7 +129,7 @@ function showStatus(message, type = "success") {
 
 function renderProduct(product) {
   const layout = document.getElementById("detail-layout");
-  const typeLabel = TYPE_LABELS[product.type] || "Product";
+  const typeLabel = formatTypeLabel(product.type);
   const warrantyLabel =
     product.warranty && product.warranty > 0
       ? `${product.warranty} year${product.warranty > 1 ? "s" : ""}`
@@ -94,8 +137,9 @@ function renderProduct(product) {
   const description = product.description
     ? `<p class="detail-description">${product.description}</p>`
     : "";
-  const specs = [];
-  if (product.type === "laptop") {
+  const flattenedSpecs = flattenSpecs(product.specsRaw);
+  const specs = flattenedSpecs.map((entry) => renderSpec(entry.label, entry.value));
+  if (!flattenedSpecs.length) {
     specs.push(renderSpec("GPU", product.gpu));
     specs.push(renderSpec("CPU", product.cpu));
     specs.push(renderSpec("RAM", product.ram));
@@ -110,13 +154,21 @@ function renderProduct(product) {
   }
   layout.innerHTML = `
     <div class="detail-main">
-      <div class="detail-heading">
-        <h1 class="detail-title">${product.title}</h1>
-        <p class="badge">${product.company?.name || "Unassigned"} • ${typeLabel}</p>
-        ${description}
-      </div>
       <div class="detail-gallery gallery">
         ${renderImages(product.images, product.title)}
+      </div>
+      <div class="detail-copy">
+        <div class="detail-heading">
+          <h1 class="detail-title">${product.title}</h1>
+          <p class="badge">${product.company?.name || "Unassigned"} • ${typeLabel}</p>
+          ${description}
+        </div>
+        <section class="detail-specs detail-specs-inline">
+          <h2>Specifications</h2>
+          <div class="spec-list">
+            ${specs.join("") || `<div class="field-hint">No specifications listed yet.</div>`}
+          </div>
+        </section>
       </div>
     </div>
     <aside class="panel detail-purchase">
@@ -139,12 +191,6 @@ function renderProduct(product) {
         Need multiple units or a custom tweak? Add the product to your cart and leave detailed notes at checkout.
       </p>
     </aside>
-    <section class="detail-specs">
-      <h2>Specifications</h2>
-      <div class="spec-list">
-        ${specs.join("") || `<div class="field-hint">No specifications listed yet.</div>`}
-      </div>
-    </section>
   `;
   initGallery();
 }
