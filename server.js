@@ -37,6 +37,13 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
 const SESSION_SECRET = process.env.SESSION_SECRET || SUPABASE_KEY;
+const ICECAT_API_URL = process.env.ICECAT_API_URL || "https://live.icecat.biz/api";
+const ICECAT_API_TOKEN = process.env.ICECAT_API_TOKEN || process.env.OPEN_ICECAT_API_TOKEN || "";
+const ICECAT_CONTENT_TOKEN = process.env.ICECAT_CONTENT_TOKEN || "";
+const ICECAT_SHOPNAME =
+  process.env.ICECAT_SHOPNAME || process.env.ICECAT_USERNAME || "openIcecat-live";
+const ICECAT_LANG = process.env.ICECAT_LANG || "EN";
+const ICECAT_CONTENT_QUERY = process.env.ICECAT_CONTENT_QUERY ?? "";
 
 function sanitizeFilename(name) {
   return name
@@ -312,32 +319,362 @@ function mapCompany(record) {
   };
 }
 
-const PRODUCT_TYPES = {
-  laptop: { table: "laptops", label: "Laptop" },
-  gpu: { table: "gpus", label: "GPU" },
-  cpu: { table: "cpus", label: "CPU" },
-  hdd: { table: "hdds", label: "HDD" },
-  motherboard: { table: "motherboards", label: "Motherboard" },
+const PRODUCT_TYPE_ALIASES = {
+  laptops: "laptop",
+  gpus: "gpu",
+  cpus: "cpu",
+  hdds: "hdd",
+  motherboards: "motherboard",
+  rams: "ram",
+  printers: "printer",
 };
+const LEGACY_SPEC_KEYS = ["gpu", "cpu", "ram", "storage", "display"];
 
 function normalizeProductType(value = "") {
-  const raw = String(value || "").trim().toLowerCase();
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
   if (!raw) return "";
-  if (raw === "laptops") return "laptop";
-  if (raw === "gpus") return "gpu";
-  if (raw === "cpus") return "cpu";
-  if (raw === "hdds") return "hdd";
-  if (raw === "motherboards") return "motherboard";
-  if (PRODUCT_TYPES[raw]) return raw;
+  return PRODUCT_TYPE_ALIASES[raw] || raw;
+}
+
+function normalizeSpecsRaw(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value === "object") return value;
+  return null;
+}
+
+function humanizeSpecKey(value = "") {
+  return String(value || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeSpecPrimitive(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
   return "";
+}
+
+function pickIcecatValue(value, depth = 0) {
+  if (depth > 4) return "";
+  const primitive = normalizeSpecPrimitive(value);
+  if (primitive) return primitive;
+  if (Array.isArray(value)) {
+    const list = value
+      .map((item) => pickIcecatValue(item, depth + 1))
+      .filter(Boolean)
+      .slice(0, 8);
+    return list.join(", ");
+  }
+  if (!value || typeof value !== "object") return "";
+  const priorityKeys = [
+    "Presentation_Value",
+    "PresentationValue",
+    "LocalValue",
+    "Value",
+    "value",
+    "DisplayValue",
+    "Name",
+    "Label",
+    "Text",
+    "text",
+  ];
+  for (const key of priorityKeys) {
+    if (value[key] !== undefined) {
+      const picked = pickIcecatValue(value[key], depth + 1);
+      if (picked) return picked;
+    }
+  }
+  for (const nested of Object.values(value)) {
+    const picked = pickIcecatValue(nested, depth + 1);
+    if (picked) return picked;
+  }
+  return "";
+}
+
+function addFlatSpec(out, key, value) {
+  const cleanKey = humanizeSpecKey(key);
+  const cleanValue = normalizeSpecPrimitive(value);
+  if (!cleanKey || !cleanValue) return;
+  if (out[cleanKey]) {
+    if (!out[cleanKey].includes(cleanValue)) {
+      out[cleanKey] += ` | ${cleanValue}`;
+    }
+    return;
+  }
+  out[cleanKey] = cleanValue;
+}
+
+function flattenIcecatSpecs(node, out = {}, context = { count: 0 }, trail = [], depth = 0) {
+  if (context.count >= 450 || depth > 8 || node == null) return out;
+  const primitive = normalizeSpecPrimitive(node);
+  if (primitive) {
+    addFlatSpec(out, trail.join(" / "), primitive);
+    context.count += 1;
+    return out;
+  }
+  if (Array.isArray(node)) {
+    node.forEach((item) => flattenIcecatSpecs(item, out, context, trail, depth + 1));
+    return out;
+  }
+  if (typeof node !== "object") return out;
+
+  const nameCandidate =
+    pickIcecatValue(node.Name) ||
+    pickIcecatValue(node.Feature) ||
+    pickIcecatValue(node.FeatureName) ||
+    pickIcecatValue(node.Label);
+  const valueCandidate =
+    pickIcecatValue(node.Presentation_Value) ||
+    pickIcecatValue(node.PresentationValue) ||
+    pickIcecatValue(node.Value) ||
+    pickIcecatValue(node.LocalValue) ||
+    pickIcecatValue(node.DisplayValue);
+  if (nameCandidate && valueCandidate) {
+    addFlatSpec(out, nameCandidate, valueCandidate);
+    context.count += 1;
+  }
+
+  Object.entries(node).forEach(([key, value]) => {
+    if (context.count >= 450) return;
+    const nextTrail = trail.concat([humanizeSpecKey(key)]);
+    flattenIcecatSpecs(value, out, context, nextTrail, depth + 1);
+  });
+  return out;
+}
+
+function parseManualSpecsString(input = "") {
+  const raw = String(input || "").trim();
+  if (!raw) return {};
+  const segments = raw
+    .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  const output = {};
+  for (const segment of segments) {
+    const colonIndex = segment.indexOf(":");
+    if (colonIndex === -1) {
+      throw new Error(`Invalid manual specs segment "${segment}". Use "Key: Value".`);
+    }
+    const key = segment.slice(0, colonIndex).trim();
+    const value = segment.slice(colonIndex + 1).trim();
+    if (!key || !value) {
+      throw new Error(`Invalid manual specs segment "${segment}". Use "Key: Value".`);
+    }
+    output[key] = value;
+  }
+  return output;
+}
+
+async function fetchIcecatSpecs(icecatId, lang = ICECAT_LANG) {
+  const normalizedId = String(icecatId || "").trim();
+  if (!normalizedId) {
+    const error = new Error("Icecat product ID is required.");
+    error.status = 400;
+    throw error;
+  }
+  if (!ICECAT_API_TOKEN) {
+    const error = new Error("Missing ICECAT_API_TOKEN in environment variables.");
+    error.status = 400;
+    throw error;
+  }
+
+  const url = new URL(ICECAT_API_URL);
+  url.searchParams.set("lang", lang || ICECAT_LANG);
+  url.searchParams.set("shopname", ICECAT_SHOPNAME);
+  url.searchParams.set("username", ICECAT_SHOPNAME);
+  url.searchParams.set("icecat_id", normalizedId);
+  // Keep `content` present to match Icecat JSON request docs (can be empty).
+  url.searchParams.set("content", ICECAT_CONTENT_QUERY);
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "api-token": ICECAT_API_TOKEN,
+      ...(ICECAT_CONTENT_TOKEN
+        ? { "content-token": ICECAT_CONTENT_TOKEN, content_token: ICECAT_CONTENT_TOKEN }
+        : {}),
+    },
+  });
+
+  const text = await response.text();
+  let payload = null;
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      payload?.msg || text || `Icecat request failed with status ${response.status}`
+    );
+    error.status = response.status;
+    throw error;
+  }
+
+  if (payload?.msg && String(payload.msg).toLowerCase() !== "ok") {
+    const error = new Error(payload.msg);
+    error.status = 400;
+    throw error;
+  }
+
+  const dataRoot = payload?.data || payload || {};
+  const data =
+    dataRoot?.Product ||
+    dataRoot?.product ||
+    dataRoot?.Data ||
+    dataRoot?.data ||
+    dataRoot ||
+    {};
+  const general =
+    data?.GeneralInfo || data?.generalInfo || data?.General || data?.general || {};
+  const flattened =
+    flattenIcecatSpecs(
+      data?.FeaturesGroups ||
+        data?.FeatureGroups ||
+        data?.featureGroups ||
+        data?.Features ||
+        data?.features ||
+        []
+    ) || {};
+  const fallbackSpecs = Object.keys(flattened).length
+    ? flattened
+    : flattenIcecatSpecs(general || data || {}) || {};
+  const mapped = {
+    id: String(general.IcecatId || normalizedId),
+    lang: lang || ICECAT_LANG,
+    shopname: ICECAT_SHOPNAME,
+    title: pickIcecatValue(data?.Title) || pickIcecatValue(general?.Title) || "",
+    brand: pickIcecatValue(general?.Brand) || "",
+    category: pickIcecatValue(general?.Category) || "",
+    productCode:
+      pickIcecatValue(general?.BrandPartCode) || pickIcecatValue(general?.ProductCode) || "",
+    summary:
+      pickIcecatValue(data?.SummaryDescription) || pickIcecatValue(data?.MarketingText) || "",
+    syncedAt: new Date().toISOString(),
+    specs: fallbackSpecs,
+  };
+  if (typeof data === "string" && data.trim()) {
+    mapped.raw = data;
+  }
+  const hasUsefulContent =
+    !!mapped.title ||
+    !!mapped.brand ||
+    !!mapped.category ||
+    !!mapped.summary ||
+    Object.keys(mapped.specs || {}).length > 0 ||
+    !!mapped.raw;
+  if (!hasUsefulContent) {
+    const error = new Error("Icecat returned no usable specs for this product ID.");
+    error.status = 404;
+    throw error;
+  }
+  return mapped;
+}
+
+function mergeProductSpecs(baseSpecs, body, options = {}) {
+  const parsedBase = normalizeSpecsRaw(baseSpecs);
+  const nextBase =
+    parsedBase && typeof parsedBase === "object" && !Array.isArray(parsedBase)
+      ? { ...parsedBase }
+      : {};
+  let next = mergeLegacySpecs(nextBase, body);
+  const { manualSpecified, manualSpecs, icecatSpecified, icecatSpecs } = options;
+
+  if (manualSpecified) {
+    if (manualSpecs && Object.keys(manualSpecs).length) {
+      next.manual = manualSpecs;
+    } else {
+      delete next.manual;
+    }
+  }
+
+  if (icecatSpecified) {
+    if (icecatSpecs && icecatSpecs.id) {
+      next.icecat = icecatSpecs;
+    } else {
+      delete next.icecat;
+    }
+  }
+
+  if (!next || typeof next !== "object" || Array.isArray(next)) {
+    next = {};
+  }
+  return next;
+}
+
+function mergeLegacySpecs(specsRaw, body) {
+  const hasLegacyInput = LEGACY_SPEC_KEYS.some((key) => body?.[key] !== undefined);
+  if (!hasLegacyInput) return specsRaw;
+  const next =
+    specsRaw && typeof specsRaw === "object" && !Array.isArray(specsRaw) ? { ...specsRaw } : {};
+  LEGACY_SPEC_KEYS.forEach((key) => {
+    if (body[key] === undefined) return;
+    const value = String(body[key] || "").trim();
+    if (!value) {
+      delete next[key];
+      return;
+    }
+    next[key] = value;
+  });
+  return next;
+}
+
+function findSpecValue(specsRaw, candidates) {
+  if (specsRaw == null) return "";
+  if (typeof specsRaw !== "object") return "";
+  const directCandidates = new Set(candidates.map((candidate) => candidate.toLowerCase()));
+  const queue = [specsRaw];
+  while (queue.length) {
+    const current = queue.shift();
+    if (Array.isArray(current)) {
+      current.forEach((item) => queue.push(item));
+      continue;
+    }
+    if (!current || typeof current !== "object") continue;
+    for (const [key, value] of Object.entries(current)) {
+      const keyLower = key.toLowerCase();
+      if (value && typeof value === "object") {
+        queue.push(value);
+      }
+      if (!directCandidates.has(keyLower)) continue;
+      if (typeof value === "string" || typeof value === "number") return String(value);
+    }
+  }
+  return "";
+}
+
+function extractLegacySpecs(specsRaw) {
+  return {
+    gpu: findSpecValue(specsRaw, ["gpu", "graphics", "graphics_card", "graphics-card"]),
+    cpu: findSpecValue(specsRaw, ["cpu", "processor"]),
+    ram: findSpecValue(specsRaw, ["ram", "memory"]),
+    storage: findSpecValue(specsRaw, ["storage", "ssd", "hdd"]),
+    display: findSpecValue(specsRaw, ["display", "screen", "panel"]),
+  };
 }
 
 function mapProduct(record, type) {
   if (!record) return null;
   const company = record.brands ? mapCompany(record.brands) : null;
-  const normalizedType = normalizeProductType(type);
+  const normalizedType = normalizeProductType(type || record.type);
+  const specsRaw = normalizeSpecsRaw(record.specs_raw);
+  const legacySpecs = extractLegacySpecs(specsRaw);
   const product = {
-    id: record.product_id || record.id,
+    id: record.id,
     type: normalizedType || type,
     companyId: record.brand_id,
     shortName: record.short_name || "",
@@ -347,15 +684,18 @@ function mapProduct(record, type) {
     description: record.description || "",
     images: Array.isArray(record.images) ? record.images : record.images ? [record.images] : [],
     warranty: record.warranty != null ? Number(record.warranty) : 0,
+    specsRaw,
+    icecatId:
+      specsRaw && typeof specsRaw === "object" && !Array.isArray(specsRaw)
+        ? String(specsRaw?.icecat?.id || "")
+        : "",
     company,
   };
-  if (normalizedType === "laptop") {
-    product.gpu = record.gpu || "";
-    product.cpu = record.cpu || "";
-    product.ram = record.ram || "";
-    product.storage = record.storage || "";
-    product.display = record.display || "";
-  }
+  product.gpu = legacySpecs.gpu || "";
+  product.cpu = legacySpecs.cpu || "";
+  product.ram = legacySpecs.ram || "";
+  product.storage = legacySpecs.storage || "";
+  product.display = legacySpecs.display || "";
   return product;
 }
 
@@ -390,6 +730,7 @@ function filterProducts(products, filters) {
   return products.filter((product) => {
     const search = filters.search?.toLowerCase() || "";
     const companyName = product.company?.name || "";
+    const specsText = product.specsRaw ? JSON.stringify(product.specsRaw).toLowerCase() : "";
     const matchesSearch =
       !search ||
       product.title.toLowerCase().includes(search) ||
@@ -397,12 +738,12 @@ function filterProducts(products, filters) {
       (product.description || "").toLowerCase().includes(search) ||
       companyName.toLowerCase().includes(search) ||
       (product.type || "").toLowerCase().includes(search) ||
-      (product.type === "laptop" &&
-        ((product.gpu || "").toLowerCase().includes(search) ||
-          (product.cpu || "").toLowerCase().includes(search) ||
-          (product.ram || "").toLowerCase().includes(search) ||
-          (product.storage || "").toLowerCase().includes(search) ||
-          (product.display || "").toLowerCase().includes(search)));
+      (product.gpu || "").toLowerCase().includes(search) ||
+      (product.cpu || "").toLowerCase().includes(search) ||
+      (product.ram || "").toLowerCase().includes(search) ||
+      (product.storage || "").toLowerCase().includes(search) ||
+      (product.display || "").toLowerCase().includes(search) ||
+      specsText.includes(search);
     const matchesCompany = !filters.companyId || product.companyId === filters.companyId;
     const matchesCategory = !normalizedCategory || product.type === normalizedCategory;
     const matchesIds =
@@ -442,61 +783,24 @@ async function fetchContact() {
   };
 }
 
-function buildProductSelect(type) {
-  const fields = [
-    "product_id",
-    "brand_id",
-    "title",
-    "price",
-    "description",
-    "images",
-    "warranty",
-    "short_name",
-    "created_at",
-    "brands(*)",
-  ];
-  if (type === "laptop") {
-    fields.push("gpu", "cpu", "ram", "storage", "display");
-  }
-  return fields.join(",");
-}
-
 async function fetchProducts({ ids = [], category = "", companyId = "" } = {}) {
   const normalizedCategory = normalizeProductType(category);
-  const params = { select: "id,type" };
+  const params = {
+    select:
+      "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
+    order: "title.asc",
+  };
   if (ids.length) {
     params.id = `in.(${ids.join(",")})`;
   }
   if (normalizedCategory) {
     params.type = `eq.${normalizedCategory}`;
   }
-  const records = await sb("products", { params });
-  if (!records.length) return [];
-  const idsByType = new Map();
-  records.forEach((record) => {
-    const type = normalizeProductType(record.type);
-    if (!type || !PRODUCT_TYPES[type]) return;
-    if (!idsByType.has(type)) {
-      idsByType.set(type, []);
-    }
-    idsByType.get(type).push(record.id);
-  });
-  const output = [];
-  for (const [type, typeIds] of idsByType.entries()) {
-    if (!typeIds.length) continue;
-    const info = PRODUCT_TYPES[type];
-    const tableParams = {
-      select: buildProductSelect(type),
-      order: "title.asc",
-      product_id: `in.(${typeIds.join(",")})`,
-    };
-    if (companyId) {
-      tableParams.brand_id = `eq.${companyId}`;
-    }
-    const rows = await sb(info.table, { params: tableParams });
-    rows.forEach((row) => output.push(mapProduct(row, type)));
+  if (companyId) {
+    params.brand_id = `eq.${companyId}`;
   }
-  return output;
+  const records = await sb("products", { params });
+  return (records || []).map((record) => mapProduct(record, record.type)).filter(Boolean);
 }
 
 async function hydrateOrders(records = []) {
@@ -664,19 +968,16 @@ async function handleApi(req, res, pathname, searchParams) {
           if (!requireAuth(req, res, session, { admin: true })) return;
           const removedProductIds = new Set();
           const removedImages = [];
-          for (const [type, info] of Object.entries(PRODUCT_TYPES)) {
-            const rows = await sb(info.table, {
-              params: { select: "product_id,images", brand_id: `eq.${slug}` },
-            });
-            rows.forEach((row) => {
-              if (row.product_id) removedProductIds.add(row.product_id);
-              if (row.images) {
-                const images = Array.isArray(row.images) ? row.images : [row.images];
-                images.filter(Boolean).forEach((image) => removedImages.push(image));
-              }
-            });
-            await sb(info.table, { method: "DELETE", params: { brand_id: `eq.${slug}` } });
-          }
+          const rows = await sb("products", {
+            params: { select: "id,images", brand_id: `eq.${slug}` },
+          });
+          (rows || []).forEach((row) => {
+            if (row.id) removedProductIds.add(row.id);
+            if (row.images) {
+              const images = Array.isArray(row.images) ? row.images : [row.images];
+              images.filter(Boolean).forEach((image) => removedImages.push(image));
+            }
+          });
           if (removedProductIds.size) {
             await sb("products", {
               method: "DELETE",
@@ -742,24 +1043,9 @@ async function handleApi(req, res, pathname, searchParams) {
             reply(400, { error: "Missing category, companyId, title, or price" });
             return;
           }
-          const info = PRODUCT_TYPES[incomingType];
-          if (!info) {
-            reply(400, { error: "Unsupported product category" });
-            return;
-          }
           const brands = await sb("brands", { params: { select: "id", id: `eq.${body.companyId}` } });
           if (!brands.length) {
             reply(404, { error: "Brand not found" });
-            return;
-          }
-          const createdProduct = await sb("products", {
-            method: "POST",
-            headers: { Prefer: "return=representation" },
-            body: { type: incomingType },
-          });
-          const productRecord = createdProduct?.[0];
-          if (!productRecord) {
-            reply(500, { error: "Failed to create product" });
             return;
           }
           const images = Array.isArray(body.images)
@@ -767,8 +1053,56 @@ async function handleApi(req, res, pathname, searchParams) {
             : typeof body.images === "string" && body.images
             ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
             : [];
+          const rawSpecsInput = body.specsRaw ?? body.specs_raw;
+          let specsRaw = null;
+          if (rawSpecsInput !== undefined && String(rawSpecsInput).trim() !== "") {
+            specsRaw = normalizeSpecsRaw(rawSpecsInput);
+            if (specsRaw == null) {
+              reply(400, { error: "Invalid specsRaw JSON payload" });
+              return;
+            }
+          }
+          const manualRaw = body.manualSpecs;
+          const manualSpecified = manualRaw !== undefined;
+          let manualSpecs = null;
+          if (manualSpecified) {
+            try {
+              manualSpecs = String(manualRaw || "").trim()
+                ? parseManualSpecsString(manualRaw)
+                : {};
+            } catch (error) {
+              reply(400, { error: error.message });
+              return;
+            }
+          }
+          const icecatInputRaw = body.icecatId ?? body.icecat_id;
+          const icecatSpecified =
+            icecatInputRaw !== undefined && String(icecatInputRaw || "").trim() !== "";
+          const icecatId = String(icecatInputRaw || "").trim();
+          let icecatSpecs = null;
+          if (icecatSpecified && icecatId) {
+            console.log("[icecat] sync create request", { icecatId, shopname: ICECAT_SHOPNAME });
+            try {
+              icecatSpecs = await fetchIcecatSpecs(icecatId);
+              console.log("[icecat] sync create success", {
+                icecatId,
+                specCount: Object.keys(icecatSpecs?.specs || {}).length,
+                title: icecatSpecs?.title || "",
+              });
+            } catch (error) {
+              console.error("[icecat] sync create failed", { icecatId, message: error.message });
+              reply(error.status || 400, { error: `Icecat sync failed: ${error.message}` });
+              return;
+            }
+          }
+          specsRaw = mergeProductSpecs(specsRaw, body, {
+            manualSpecified,
+            manualSpecs,
+            icecatSpecified,
+            icecatSpecs,
+          });
           const payload = {
-            product_id: productRecord.id,
+            type: incomingType,
             brand_id: body.companyId,
             short_name: body.shortName || "",
             title: body.title,
@@ -776,21 +1110,24 @@ async function handleApi(req, res, pathname, searchParams) {
             description: body.description || "",
             warranty: body.warranty != null ? Number(body.warranty) : 0,
             images,
+            specs_raw: specsRaw || {},
           };
-          if (incomingType === "laptop") {
-            payload.gpu = body.gpu || "";
-            payload.cpu = body.cpu || "";
-            payload.ram = body.ram || "";
-            payload.storage = body.storage || "";
-            payload.display = body.display || "";
-          }
-          await sb(info.table, {
+          const created = await sb("products", {
             method: "POST",
             headers: { Prefer: "return=representation" },
             body: payload,
           });
-          const hydrated = await sb(info.table, {
-            params: { select: buildProductSelect(incomingType), product_id: `eq.${productRecord.id}` },
+          const productRecord = created?.[0];
+          if (!productRecord) {
+            reply(500, { error: "Failed to create product" });
+            return;
+          }
+          const hydrated = await sb("products", {
+            params: {
+              select:
+                "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
+              id: `eq.${productRecord.id}`,
+            },
           });
           reply(201, mapProduct(hydrated?.[0], incomingType));
           return;
@@ -802,7 +1139,9 @@ async function handleApi(req, res, pathname, searchParams) {
             reply(400, { error: "Missing payload" });
             return;
           }
-          const current = await sb("products", { params: { select: "id,type", id: `eq.${slug}` } });
+          const current = await sb("products", {
+            params: { select: "id,type,specs_raw", id: `eq.${slug}` },
+          });
           if (!current.length) {
             reply(404, { error: "Product not found" });
             return;
@@ -813,7 +1152,6 @@ async function handleApi(req, res, pathname, searchParams) {
             reply(400, { error: "Category changes require creating a new product." });
             return;
           }
-          const info = PRODUCT_TYPES[existingType];
           const payload = {
             brand_id: body.companyId,
             short_name: body.shortName,
@@ -827,12 +1165,68 @@ async function handleApi(req, res, pathname, searchParams) {
               ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
               : undefined,
           };
-          if (existingType === "laptop") {
-            payload.gpu = body.gpu;
-            payload.cpu = body.cpu;
-            payload.ram = body.ram;
-            payload.storage = body.storage;
-            payload.display = body.display;
+          const rawSpecsInput = body.specsRaw ?? body.specs_raw;
+          const hasSpecsRawInput = rawSpecsInput !== undefined;
+          const manualRaw = body.manualSpecs;
+          const manualSpecified = manualRaw !== undefined;
+          let manualSpecs = null;
+          if (manualSpecified) {
+            try {
+              manualSpecs = String(manualRaw || "").trim()
+                ? parseManualSpecsString(manualRaw)
+                : {};
+            } catch (error) {
+              reply(400, { error: error.message });
+              return;
+            }
+          }
+          const icecatInputRaw = body.icecatId ?? body.icecat_id;
+          const icecatSpecified =
+            icecatInputRaw !== undefined && String(icecatInputRaw || "").trim() !== "";
+          const icecatId = String(icecatInputRaw || "").trim();
+          let icecatSpecs = null;
+          if (icecatSpecified && icecatId) {
+            console.log("[icecat] sync patch request", { productId: slug, icecatId, shopname: ICECAT_SHOPNAME });
+            try {
+              icecatSpecs = await fetchIcecatSpecs(icecatId);
+              console.log("[icecat] sync patch success", {
+                productId: slug,
+                icecatId,
+                specCount: Object.keys(icecatSpecs?.specs || {}).length,
+                title: icecatSpecs?.title || "",
+              });
+            } catch (error) {
+              console.error("[icecat] sync patch failed", {
+                productId: slug,
+                icecatId,
+                message: error.message,
+              });
+              reply(error.status || 400, { error: `Icecat sync failed: ${error.message}` });
+              return;
+            }
+          }
+          if (
+            hasSpecsRawInput ||
+            LEGACY_SPEC_KEYS.some((key) => body[key] !== undefined) ||
+            manualSpecified ||
+            icecatSpecified
+          ) {
+            let nextSpecs = hasSpecsRawInput
+              ? String(rawSpecsInput).trim() === ""
+                ? {}
+                : normalizeSpecsRaw(rawSpecsInput)
+              : normalizeSpecsRaw(current[0].specs_raw) || {};
+            if (hasSpecsRawInput && nextSpecs == null) {
+              reply(400, { error: "Invalid specsRaw JSON payload" });
+              return;
+            }
+            nextSpecs = mergeProductSpecs(nextSpecs, body, {
+              manualSpecified,
+              manualSpecs,
+              icecatSpecified,
+              icecatSpecs,
+            });
+            payload.specs_raw = nextSpecs || {};
           }
           Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
           if (payload.brand_id) {
@@ -842,14 +1236,18 @@ async function handleApi(req, res, pathname, searchParams) {
               return;
             }
           }
-          await sb(info.table, {
+          await sb("products", {
             method: "PATCH",
-            params: { product_id: `eq.${slug}` },
+            params: { id: `eq.${slug}` },
             headers: { Prefer: "return=representation" },
             body: payload,
           });
-          const hydrated = await sb(info.table, {
-            params: { select: buildProductSelect(existingType), product_id: `eq.${slug}` },
+          const hydrated = await sb("products", {
+            params: {
+              select:
+                "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
+              id: `eq.${slug}`,
+            },
           });
           if (!hydrated.length) {
             reply(404, { error: "Product not found" });
@@ -860,18 +1258,15 @@ async function handleApi(req, res, pathname, searchParams) {
         }
         if (method === "DELETE" && slug) {
           if (!requireAuth(req, res, session, { admin: true })) return;
-          const current = await sb("products", { params: { select: "id,type", id: `eq.${slug}` } });
+          const current = await sb("products", { params: { select: "id", id: `eq.${slug}` } });
           if (!current.length) {
             reply(404, { error: "Product not found" });
             return;
           }
-          const existingType = normalizeProductType(current[0].type);
-          const info = PRODUCT_TYPES[existingType];
-          const records = await sb(info.table, {
-            params: { select: "product_id,images", product_id: `eq.${slug}` },
+          const records = await sb("products", {
+            params: { select: "id,images", id: `eq.${slug}` },
           });
           const record = records?.[0];
-          await sb(info.table, { method: "DELETE", params: { product_id: `eq.${slug}` } });
           await sb("products", { method: "DELETE", params: { id: `eq.${slug}` } });
           if (record?.images) {
             const images = Array.isArray(record.images) ? record.images : [record.images];

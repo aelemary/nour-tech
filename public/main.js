@@ -1,6 +1,7 @@
 const API_BASE = "/api";
 const state = {
   products: [],
+  allProducts: [],
   companies: [],
 };
 let inventoryStatusEl = null;
@@ -12,6 +13,17 @@ const CATEGORY_LABELS = {
   hdd: "HDDs",
   motherboard: "Motherboards",
 };
+
+function formatCategoryLabel(type) {
+  const normalized = String(type || "").trim().toLowerCase();
+  if (!normalized) return "Products";
+  if (CATEGORY_LABELS[normalized]) return CATEGORY_LABELS[normalized];
+  if (normalized === "ram") return "RAM";
+  const title = normalized
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return title.endsWith("s") ? title : `${title}s`;
+}
 
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, { credentials: "include", ...options });
@@ -65,10 +77,38 @@ function populateCompanyFilter(companies = []) {
   }
 }
 
+function populateCategoryFilter(products = []) {
+  const select = document.getElementById("filter-category");
+  if (!select) return;
+  const current = select.value;
+  const knownOrder = Object.keys(CATEGORY_LABELS);
+  const dynamicTypes = Array.from(
+    new Set(
+      (products || [])
+        .map((product) => String(product.type || "").trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+  const types = [
+    ...knownOrder.filter((type) => dynamicTypes.includes(type)),
+    ...dynamicTypes.filter((type) => !knownOrder.includes(type)).sort(),
+  ];
+  select.innerHTML = `<option value="">All categories</option>`;
+  types.forEach((type) => {
+    const option = document.createElement("option");
+    option.value = type;
+    option.textContent = formatCategoryLabel(type);
+    select.appendChild(option);
+  });
+  if (current && types.includes(current)) {
+    select.value = current;
+  }
+}
+
 function createProductCard(product) {
   const card = document.createElement("article");
   card.className = "laptop-card";
-  const typeLabel = CATEGORY_LABELS[product.type] || "Products";
+  const typeLabel = formatCategoryLabel(product.type);
   const brandLabel = product.company?.name || "Unassigned";
   const image =
     product.images?.[0] || `https://placehold.co/600x400?text=${encodeURIComponent(typeLabel)}`;
@@ -149,19 +189,26 @@ function renderProducts(products) {
   toggleEmptyState(true);
   const fragment = document.createDocumentFragment();
   const grouped = products.reduce((acc, product) => {
-    const type = product.type || "other";
+    const type = String(product.type || "other").toLowerCase();
     if (!acc[type]) acc[type] = [];
     acc[type].push(product);
     return acc;
   }, {});
-  Object.keys(CATEGORY_LABELS).forEach((type) => {
+  const knownOrder = Object.keys(CATEGORY_LABELS);
+  const categoryOrder = [
+    ...knownOrder.filter((type) => grouped[type]?.length),
+    ...Object.keys(grouped)
+      .filter((type) => !knownOrder.includes(type))
+      .sort((a, b) => formatCategoryLabel(a).localeCompare(formatCategoryLabel(b))),
+  ];
+  categoryOrder.forEach((type) => {
     const items = grouped[type] || [];
     if (!items.length) return;
     const section = document.createElement("section");
     section.className = "catalog-section";
     section.innerHTML = `
       <div class="catalog-heading">
-        <h2>${CATEGORY_LABELS[type]}</h2>
+        <h2>${formatCategoryLabel(type)}</h2>
         <span>${items.length} item${items.length > 1 ? "s" : ""}</span>
       </div>
       <div class="catalog-grid"></div>
@@ -170,23 +217,6 @@ function renderProducts(products) {
     items.forEach((product) => grid.appendChild(createProductCard(product)));
     fragment.appendChild(section);
   });
-  const otherItems = Object.entries(grouped)
-    .filter(([type]) => !CATEGORY_LABELS[type])
-    .flatMap(([, items]) => items);
-  if (otherItems.length) {
-    const section = document.createElement("section");
-    section.className = "catalog-section";
-    section.innerHTML = `
-      <div class="catalog-heading">
-        <h2>Other Products</h2>
-        <span>${otherItems.length} item${otherItems.length > 1 ? "s" : ""}</span>
-      </div>
-      <div class="catalog-grid"></div>
-    `;
-    const grid = section.querySelector(".catalog-grid");
-    otherItems.forEach((product) => grid.appendChild(createProductCard(product)));
-    fragment.appendChild(section);
-  }
   results.appendChild(fragment);
 }
 
@@ -198,8 +228,10 @@ async function init() {
     const inventoryPromise = loadInventory();
     const companiesPromise = loadCompanies().catch(() => []);
     const [inventory, companies] = await Promise.all([inventoryPromise, companiesPromise]);
+    state.allProducts = inventory || [];
     state.companies = companies || [];
     populateCompanyFilter(state.companies);
+    populateCategoryFilter(inventory || []);
     renderProducts(inventory);
     const form = document.getElementById("filter-form");
     const resetButton = document.getElementById("filter-reset");
@@ -222,6 +254,7 @@ async function init() {
       resetButton.addEventListener("click", async () => {
         form.reset();
         populateCompanyFilter(state.companies);
+        populateCategoryFilter(state.allProducts);
         showInventoryStatus("Resetting filters…");
         const results = await loadInventory();
         renderProducts(results);

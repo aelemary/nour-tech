@@ -13,19 +13,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Nour Tech</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" type="image/png" href="/data/nourtechsmall.png" />
   </head>
   <body class="page-main">
     <header>
-      <a class="logo" href="/">
-        <img src="/logo.jpg" alt="Nour Tech logo" class="logo-mark" />
-        Nour Tech
+      <a class="logo" href="/" aria-label="Nour Tech home">
+        <img src="/data/nourtechlogo.png" alt="Nour Tech logo" class="logo-mark" />
       </a>
       <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">Menu</button>
       <nav id="site-nav">
         <a href="/index.html">Inventory</a>
         <a href="/contact.html">Contact</a>
-        <a href="https://www.facebook.com/share/1BJq8qdpZs/" class="nav-social" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><img src="/data/facebook.png" alt="" class="nav-icon" /></a>
-        <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
+<a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
         <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
         <a href="/admin.html" data-requires-role="admin">Admin</a>
         <span id="nav-user" class="nav-user" hidden></span>
@@ -94,15 +93,67 @@
       </section>
     </main>
 
-    <footer>
-      Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.
-      <br />
-      Need a custom configuration? <a href="/contact.html">Talk to the team.</a>
+    <footer class="site-footer">
+      <div class="footer-main">
+        <a href="/" class="footer-logo-link" aria-label="Nour Tech home">
+          <img src="/data/nourtechlogo.png" alt="Nour Tech" class="footer-logo" />
+        </a>
+        <div class="footer-socials">
+          <a
+            href="https://www.facebook.com/share/1BJq8qdpZs/"
+            class="footer-social"
+            aria-label="Facebook"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src="/data/facebook.png" alt="" class="footer-social-icon footer-social-image" />
+          </a>
+          <a
+            href="https://x.com/"
+            class="footer-social"
+            aria-label="Twitter"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg viewBox="0 0 24 24" class="footer-social-icon" aria-hidden="true">
+              <path d="M18.9 2H22l-6.8 7.8L23 22h-6.2l-4.8-6.3L6.6 22H3.5l7.3-8.3L1 2h6.3l4.3 5.7L18.9 2z" />
+            </svg>
+          </a>
+          <a
+            href="#"
+            class="footer-social"
+            id="footer-whatsapp-link"
+            aria-label="WhatsApp"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg viewBox="0 0 24 24" class="footer-social-icon" aria-hidden="true">
+              <path d="M20 11.2C20 6.7 16.4 3 12 3S4 6.7 4 11.2c0 1.8.6 3.5 1.6 4.8L4.5 21l5-1.3c1.1.6 2.4.9 3.6.9 4.4 0 7.9-3.7 7.9-9.4zm-8 7.4c-1.1 0-2.2-.3-3.2-.9l-.4-.2-3 .8.8-3-.3-.4c-1-1.3-1.5-2.7-1.5-4.3 0-3.4 2.7-6.2 6.1-6.2s6.1 2.8 6.1 6.2-2.7 6.2-6.1 6.2zm3.4-4.6c-.2-.1-1.3-.6-1.5-.7s-.3-.1-.4.1-.5.7-.6.8-.2.2-.4.1c-.2-.1-.9-.3-1.7-1-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.3c.1-.1.1-.2.2-.3.1-.1 0-.2 0-.3 0-.1-.4-1-.6-1.4-.2-.4-.3-.3-.4-.3h-.3c-.1 0-.3 0-.4.2-.1.2-.6.6-.6 1.5s.6 1.7.7 1.8c.1.1 1.2 2 2.9 2.7 1.8.8 1.8.5 2.2.5.4-.1 1.3-.5 1.5-.9.2-.4.2-.8.1-.9-.1-.1-.2-.1-.4-.2z" />
+            </svg>
+          </a>
+        </div>
+      </div>
+      <div class="footer-contact">
+        <p><strong>Sales Hotline:</strong> <span data-footer-contact="salesHotline">—</span></p>
+        <p>
+          <strong>WhatsApp:</strong>
+          <a href="#" id="footer-whatsapp-text-link" target="_blank" rel="noopener noreferrer">
+            <span data-footer-contact="whatsapp">—</span>
+          </a>
+        </p>
+        <p>
+          <strong>Email:</strong>
+          <a href="mailto:support@nourtech.example" data-footer-contact-email>support@nourtech.example</a>
+        </p>
+        <p><strong>Address:</strong> <span data-footer-contact="address">—</span></p>
+      </div>
+      <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.</p>
     </footer>
 
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
     <script src="/main.js" defer></script>
+      <script src="/footer.js" defer></script>
       <script src="/nav.js" defer></script>
   </body>
 </html>

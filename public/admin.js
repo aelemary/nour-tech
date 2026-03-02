@@ -101,6 +101,37 @@ function parseImageList(value) {
     .filter(Boolean);
 }
 
+function formatManualSpecs(specsRaw) {
+  if (!specsRaw || typeof specsRaw !== "object" || Array.isArray(specsRaw)) return "";
+  const manual = specsRaw.manual;
+  if (!manual || typeof manual !== "object" || Array.isArray(manual)) return "";
+  return Object.entries(manual)
+    .filter(([key, value]) => key && value != null && String(value).trim() !== "")
+    .map(([key, value]) => `${key}: ${String(value).trim()}`)
+    .join(", ");
+}
+
+function validateManualSpecsFormat(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const segments = raw
+    .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  for (const segment of segments) {
+    const colonIndex = segment.indexOf(":");
+    if (colonIndex === -1) {
+      return `Invalid segment "${segment}". Use "Key: Value".`;
+    }
+    const key = segment.slice(0, colonIndex).trim();
+    const specValue = segment.slice(colonIndex + 1).trim();
+    if (!key || !specValue) {
+      return `Invalid segment "${segment}". Use "Key: Value".`;
+    }
+  }
+  return "";
+}
+
 function renderImagePreview(urls) {
   const preview = document.getElementById("image-preview");
   if (!preview) return;
@@ -209,6 +240,15 @@ function startEditingProduct(productId) {
   const warrantyInput = form.querySelector('input[name="warranty"]');
   if (warrantyInput) warrantyInput.value = product.warranty ?? "";
   form.querySelector('textarea[name="description"]').value = product.description || "";
+  const icecatInput = form.querySelector('input[name="icecatId"]');
+  if (icecatInput) {
+    const icecatId = product.icecatId || product.specsRaw?.icecat?.id || "";
+    icecatInput.value = icecatId ? String(icecatId) : "";
+  }
+  const manualSpecsTextarea = form.querySelector('textarea[name="manualSpecs"]');
+  if (manualSpecsTextarea) {
+    manualSpecsTextarea.value = formatManualSpecs(product.specsRaw);
+  }
   const imagesTextarea = form.querySelector('textarea[name="images"]');
   imagesTextarea.value = (product.images || []).join("\n");
   renderImagePreview(product.images || []);
@@ -784,6 +824,19 @@ async function handleProductSubmit(event) {
   } else {
     payload.warranty = 0;
   }
+  payload.icecatId = payload.icecatId ? payload.icecatId.trim() : "";
+  payload.manualSpecs = payload.manualSpecs ? payload.manualSpecs.trim() : "";
+  if (!payload.icecatId) {
+    delete payload.icecatId;
+  }
+  if (!payload.manualSpecs) {
+    delete payload.manualSpecs;
+  }
+  const manualSpecsError = validateManualSpecsFormat(payload.manualSpecs || "");
+  if (manualSpecsError) {
+    showStatus("product-status", manualSpecsError, "error");
+    return;
+  }
   payload.images = parseImageList(payload.images);
   if (payload.category !== "laptop") {
     delete payload.gpu;
@@ -819,7 +872,11 @@ async function handleProductSubmit(event) {
     if (error.status === 401 || error.status === 403) {
       showStatus("product-status", "Admin access required to publish listings.", "error");
     } else {
-      showStatus("product-status", "Couldn't publish listing.", "error");
+      showStatus(
+        "product-status",
+        error && error.message ? error.message : "Couldn't publish listing.",
+        "error"
+      );
     }
   }
 }
