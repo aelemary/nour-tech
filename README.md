@@ -17,6 +17,8 @@ Do not commit `.env` files or service-role keys. If a service key is exposed, ro
 - `SUPABASE_URL`: Supabase project URL.
 - `SUPABASE_SERVICE_KEY`: Server-only service-role key. Never expose it to browser code.
 - `SUPABASE_STORAGE_BUCKET`: Public bucket used for product images.
+- `OLD_SUPABASE_URL`: Optional legacy Supabase project used only to read contact details.
+- `OLD_SUPABASE_SERVICE_KEY`: Server-only key for the legacy contact source.
 - `SESSION_SECRET`: Long random value used to sign login cookies. Set the same value on every deployment instance.
 - `ICECAT_API_TOKEN`: Icecat API token.
 - `ICECAT_CONTENT_TOKEN`: Icecat content token, when required by the account.

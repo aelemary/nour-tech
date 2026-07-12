@@ -57,6 +57,8 @@ function renderContactDetails(contact) {
   });
   const availability = Array.isArray(contact.availability) ? contact.availability : [];
   const list = document.getElementById("contact-availability");
+  const panel = document.getElementById("contact-availability-panel");
+  if (panel) panel.hidden = !availability.length;
   if (list) {
     list.innerHTML = "";
     if (!availability.length) {
@@ -89,7 +91,7 @@ function populateForm(contact) {
 function toggleEditor() {
   const panel = document.getElementById("contact-admin-panel");
   if (!panel) return;
-  panel.hidden = !state.isAdmin;
+  panel.hidden = !state.isAdmin || Boolean(state.contact?.readOnly);
 }
 
 function gatherFormData(form) {
@@ -140,6 +142,7 @@ async function loadContact() {
     state.contact = contact;
     renderContactDetails(contact);
     populateForm(contact);
+    toggleEditor();
   } catch (error) {
     console.error(error);
     const list = document.getElementById("contact-availability");

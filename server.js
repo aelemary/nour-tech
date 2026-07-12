@@ -36,6 +36,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   process.exit(1);
 }
 const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
+const OLD_SUPABASE_URL = process.env.OLD_SUPABASE_URL || "";
+const OLD_SUPABASE_KEY = process.env.OLD_SUPABASE_SERVICE_KEY || "";
+const OLD_SUPABASE_REST_URL = OLD_SUPABASE_URL ? `${OLD_SUPABASE_URL}/rest/v1` : "";
 const SESSION_SECRET = process.env.SESSION_SECRET || SUPABASE_KEY;
 const ICECAT_API_URL = process.env.ICECAT_API_URL || "https://live.icecat.biz/api";
 const ICECAT_API_TOKEN = process.env.ICECAT_API_TOKEN || process.env.OPEN_ICECAT_API_TOKEN || "";
@@ -242,6 +245,29 @@ async function sb(pathname, { method = "GET", params = {}, headers = {}, body } 
     return JSON.parse(text);
   }
   return text;
+}
+
+async function sbOld(pathname, { params = {} } = {}) {
+  if (!OLD_SUPABASE_REST_URL || !OLD_SUPABASE_KEY) {
+    throw new Error("Old Supabase contact source is not configured.");
+  }
+  const url = new URL(`${OLD_SUPABASE_REST_URL}/${pathname}`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) url.searchParams.append(key, value);
+  });
+  const response = await fetch(url, {
+    headers: {
+      apikey: OLD_SUPABASE_KEY,
+      Authorization: `Bearer ${OLD_SUPABASE_KEY}`,
+    },
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    const error = new Error(text || `Old Supabase request failed with status ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
 }
 
 async function storeImage(finalName, base64Payload, mime) {
@@ -769,7 +795,9 @@ async function handleAuthMe(session, reply) {
 }
 
 async function fetchContact() {
-  const data = await sb("contact", { params: { select: "*", id: "eq.1" } });
+  const data = OLD_SUPABASE_REST_URL && OLD_SUPABASE_KEY
+    ? await sbOld("contact", { params: { select: "*", id: "eq.1" } })
+    : await sb("contact", { params: { select: "*", id: "eq.1" } });
   return data?.[0] || {
     sales_hotline: "+20 100 000 0000",
     whatsapp: "+20 100 000 0001",
@@ -1418,11 +1446,16 @@ async function handleApi(req, res, pathname, searchParams) {
             supportEmail: record.support_email || "",
             address: record.address || "",
             availability: record.availability || [],
+            readOnly: Boolean(OLD_SUPABASE_REST_URL && OLD_SUPABASE_KEY),
           });
           return;
         }
         if (method === "PUT") {
           if (!requireAuth(req, res, session, { admin: true })) return;
+          if (OLD_SUPABASE_REST_URL && OLD_SUPABASE_KEY) {
+            reply(409, { error: "Contact details are loaded read-only from the old database." });
+            return;
+          }
           const body = await parseBody(req);
           const payload = {
             sales_hotline: body.salesHotline || "",
