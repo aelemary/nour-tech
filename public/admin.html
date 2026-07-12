@@ -37,9 +37,7 @@
       <section class="panel">
         <h1>Operations Dashboard</h1>
         <p style="color: var(--text-muted); max-width: 720px;">
-          Launch new brands, publish products, and monitor cash-on-delivery orders in real time.
-          Everything persists to the local JSON datastore, making this perfect for rapid prototyping before
-          moving to a production database or payments stack.
+          Manage brands, publish products, and monitor customer orders from Supabase.
         </p>
         <div class="stats-grid" id="admin-stats">
           <div class="stat-card">
@@ -61,7 +59,7 @@
         <h2>Catalog Management</h2>
         <div class="admin-grid">
           <form id="company-form" class="panel-lite">
-            <h3>Add Laptop Brand</h3>
+            <h3>Add Brand</h3>
             <label>
               Brand Name
               <input type="text" name="name" placeholder="MSI, Dell, Razer…" required />
@@ -89,7 +87,14 @@
                 <option value="gpu">GPU</option>
                 <option value="cpu">CPU</option>
                 <option value="hdd">HDD</option>
+                <option value="storage">Storage</option>
                 <option value="motherboard">Motherboard</option>
+                <option value="ram">RAM</option>
+                <option value="monitor">Monitor</option>
+                <option value="printer">Printer</option>
+                <option value="desktop">Desktop</option>
+                <option value="power">Power</option>
+                <option value="accessory">Accessory</option>
               </select>
             </label>
             <label>
@@ -115,22 +120,6 @@
                 placeholder="Legion 7i RTX 4080"
                 maxlength="80"
               />
-            </label>
-            <label>
-              Price (EGP)
-              <input
-                type="number"
-                name="price"
-                min="0"
-                step="1"
-                inputmode="decimal"
-                placeholder="60000"
-                required
-              />
-            </label>
-            <label>
-              Currency (ISO)
-              <input type="text" name="currency" maxlength="3" placeholder="EGP" />
             </label>
             <label class="laptop-only">
               GPU
@@ -218,7 +207,6 @@
                 <thead>
                   <tr>
                     <th>Listing</th>
-                    <th>Price</th>
                     <th></th>
                   </tr>
                 </thead>

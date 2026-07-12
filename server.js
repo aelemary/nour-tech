@@ -679,8 +679,6 @@ function mapProduct(record, type) {
     companyId: record.brand_id,
     shortName: record.short_name || "",
     title: record.title,
-    price: Number(record.price) || 0,
-    currency: "EGP",
     description: record.description || "",
     images: Array.isArray(record.images) ? record.images : record.images ? [record.images] : [],
     warranty: record.warranty != null ? Number(record.warranty) : 0,
@@ -748,9 +746,7 @@ function filterProducts(products, filters) {
     const matchesCategory = !normalizedCategory || product.type === normalizedCategory;
     const matchesIds =
       !filters.ids || (Array.isArray(filters.ids) && filters.ids.includes(product.id));
-    const matchesMin = !filters.minPrice || product.price >= Number(filters.minPrice);
-    const matchesMax = !filters.maxPrice || product.price <= Number(filters.maxPrice);
-    return matchesSearch && matchesCompany && matchesCategory && matchesIds && matchesMin && matchesMax;
+    return matchesSearch && matchesCompany && matchesCategory && matchesIds;
   });
 }
 
@@ -787,7 +783,7 @@ async function fetchProducts({ ids = [], category = "", companyId = "" } = {}) {
   const normalizedCategory = normalizeProductType(category);
   const params = {
     select:
-      "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
+      "id,type,brand_id,title,short_name,description,images,warranty,specs_raw,created_at,brands(*)",
     order: "title.asc",
   };
   if (ids.length) {
@@ -1029,8 +1025,6 @@ async function handleApi(req, res, pathname, searchParams) {
             companyId,
             category,
             ids: idsRaw.length ? idsRaw : null,
-            minPrice: searchParams.get("minPrice"),
-            maxPrice: searchParams.get("maxPrice"),
           });
           reply(200, results);
           return;
@@ -1039,8 +1033,8 @@ async function handleApi(req, res, pathname, searchParams) {
           if (!requireAuth(req, res, session, { admin: true })) return;
           const body = await parseBody(req);
           const incomingType = normalizeProductType(body?.category || body?.type || forcedCategory);
-          if (!body || !incomingType || !body.companyId || !body.title || body.price == null) {
-            reply(400, { error: "Missing category, companyId, title, or price" });
+          if (!body || !incomingType || !body.companyId || !body.title) {
+            reply(400, { error: "Missing category, companyId, or title" });
             return;
           }
           const brands = await sb("brands", { params: { select: "id", id: `eq.${body.companyId}` } });
@@ -1106,7 +1100,6 @@ async function handleApi(req, res, pathname, searchParams) {
             brand_id: body.companyId,
             short_name: body.shortName || "",
             title: body.title,
-            price: Number(body.price),
             description: body.description || "",
             warranty: body.warranty != null ? Number(body.warranty) : 0,
             images,
@@ -1125,7 +1118,7 @@ async function handleApi(req, res, pathname, searchParams) {
           const hydrated = await sb("products", {
             params: {
               select:
-                "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
+                "id,type,brand_id,title,short_name,description,images,warranty,specs_raw,created_at,brands(*)",
               id: `eq.${productRecord.id}`,
             },
           });
@@ -1156,7 +1149,6 @@ async function handleApi(req, res, pathname, searchParams) {
             brand_id: body.companyId,
             short_name: body.shortName,
             title: body.title,
-            price: body.price != null ? Number(body.price) : undefined,
             description: body.description,
             warranty: body.warranty != null ? Number(body.warranty) : undefined,
             images: Array.isArray(body.images)
@@ -1245,7 +1237,7 @@ async function handleApi(req, res, pathname, searchParams) {
           const hydrated = await sb("products", {
             params: {
               select:
-                "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
+                "id,type,brand_id,title,short_name,description,images,warranty,specs_raw,created_at,brands(*)",
               id: `eq.${slug}`,
             },
           });

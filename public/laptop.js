@@ -5,8 +5,24 @@ const TYPE_LABELS = {
   gpu: "GPU",
   cpu: "CPU",
   hdd: "HDD",
+  storage: "Storage",
   motherboard: "Motherboard",
+  ram: "RAM",
+  monitor: "Monitor",
+  printer: "Printer",
+  desktop: "Desktop",
+  power: "Power",
+  accessory: "Accessory",
 };
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function formatTypeLabel(type) {
   const normalized = String(type || "").trim().toLowerCase();
@@ -60,7 +76,7 @@ function renderImages(images = [], title = "Product image") {
     .map(
       (url, index) =>
         `<figure class="gallery-slide" data-index="${index}">
-          <img src="${url}" alt="${title} ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" />
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(title)} ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" />
         </figure>`
     )
     .join("");
@@ -79,7 +95,7 @@ function renderImages(images = [], title = "Product image") {
 
 function renderSpec(label, value) {
   if (!value) return "";
-  return `<div class="spec-item"><span>${label}</span><strong>${value}</strong></div>`;
+  return `<div class="spec-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
 function normalizeSpecLabel(value = "") {
@@ -193,6 +209,42 @@ const TYPE_SPEC_FIELDS = {
     { label: "Drive Size", keys: ["hdd size", "drive size", "form factor"] },
     { label: "Speed", keys: ["hdd speed", "read speed", "write speed"] },
   ],
+  storage: [
+    { label: "Capacity", keys: ["ssd capacity", "hdd capacity", "storage capacity", "capacity", "storage"] },
+    { label: "Drive Type", keys: ["storage media", "drive type", "ssd form factor"] },
+    { label: "Interface", keys: ["interface", "host interface", "serial ata", "sata"] },
+    { label: "Read Speed", keys: ["read speed", "sequential read"] },
+    { label: "Write Speed", keys: ["write speed", "sequential write"] },
+  ],
+  ram: [
+    { label: "Capacity", keys: ["internal memory", "memory capacity", "ram", "memory"] },
+    { label: "Memory Type", keys: ["internal memory type", "memory type"] },
+    { label: "Speed", keys: ["memory clock speed", "memory speed"] },
+    { label: "Form Factor", keys: ["memory form factor", "form factor"] },
+  ],
+  monitor: [
+    { label: "Display Size", keys: ["display diagonal", "screen size"] },
+    { label: "Resolution", keys: ["display resolution", "resolution"] },
+    { label: "Panel Type", keys: ["panel type", "display technology"] },
+    { label: "Refresh Rate", keys: ["maximum refresh rate", "refresh rate"] },
+    { label: "Response Time", keys: ["response time", "response time mprt"] },
+    { label: "Ports", keys: ["hdmi ports quantity", "displayports quantity", "ports"] },
+  ],
+  printer: [
+    { label: "Print Technology", keys: ["print technology", "printing"] },
+    { label: "Colour", keys: ["colour", "color"] },
+    { label: "Print Speed", keys: ["print speed", "printing speed"] },
+    { label: "Resolution", keys: ["maximum resolution", "print resolution", "resolution"] },
+    { label: "Connectivity", keys: ["wi fi", "ethernet lan", "usb port", "connectivity"] },
+  ],
+  desktop: COMMON_SPEC_FIELDS,
+  power: [
+    { label: "Power", keys: ["total power", "rated power", "power"] },
+    { label: "Efficiency", keys: ["80 plus certification", "efficiency"] },
+    { label: "Form Factor", keys: ["power supply unit form factor", "form factor"] },
+    { label: "Cooling", keys: ["fan diameter", "cooling"] },
+  ],
+  accessory: COMMON_SPEC_FIELDS,
 };
 
 function findSpecValue(entries, keys) {
@@ -282,8 +334,14 @@ function renderProduct(product) {
     product.warranty && product.warranty > 0
       ? `${product.warranty} year${product.warranty > 1 ? "s" : ""}`
       : "";
-  const description = product.description
-    ? `<p class="detail-description">${product.description}</p>`
+  const normalizedDescription = normalizeSpecLabel(product.description);
+  const descriptionRepeatsTitle =
+    normalizedDescription &&
+    [product.title, product.shortName].some(
+      (value) => value && normalizeSpecLabel(value) === normalizedDescription
+    );
+  const description = product.description && !descriptionRepeatsTitle
+    ? `<p class="detail-description">${escapeHtml(product.description)}</p>`
     : "";
   const specs = buildCuratedSpecs(product, warrantyLabel);
   const advancedSpecs = buildAdvancedSpecs(product);
@@ -294,8 +352,8 @@ function renderProduct(product) {
       </div>
       <div class="detail-copy">
         <div class="detail-heading">
-          <h1 class="detail-title">${product.title}</h1>
-          <p class="badge">${product.company?.name || "Unassigned"} • ${typeLabel}</p>
+          <h1 class="detail-title">${escapeHtml(product.title)}</h1>
+          <p class="badge">${escapeHtml(product.company?.name || "Unassigned")} • ${escapeHtml(typeLabel)}</p>
           ${description}
         </div>
         <section class="detail-specs detail-specs-inline">
@@ -318,13 +376,8 @@ function renderProduct(product) {
     </div>
     <aside class="panel detail-purchase">
       <h2>Purchase Options</h2>
-      <p class="price">${new Intl.NumberFormat("en-EG", {
-        style: "currency",
-        currency: product.currency || "EGP",
-        maximumFractionDigits: 0,
-      }).format(product.price)}</p>
       <p class="field-hint">
-        Complete payment on the checkout page. Cash on delivery is confirmed as soon as you submit the order.
+        Submit your order details and our team will contact you to confirm availability.
       </p>
       <div class="btn-stack">
         <button class="btn btn-primary" data-buy-now="${product.id}">Buy Now</button>

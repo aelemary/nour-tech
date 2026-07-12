@@ -5,14 +5,6 @@ function setYear() {
   }
 }
 
-function formatCurrency(amount = 0, currency = "EGP") {
-  return new Intl.NumberFormat("en-EG", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, { credentials: "include", ...options });
   if (!res.ok) {
@@ -60,13 +52,9 @@ function renderOrders(orders) {
     const items = Array.isArray(order.items) ? order.items : [];
     const firstItem = items[0];
     const productTitle = firstItem?.product ? firstItem.product.title : "Product removed";
-    const currency = firstItem?.product?.currency || "EGP";
     const statusLabel = order.status
       ? order.status.charAt(0).toUpperCase() + order.status.slice(1)
       : "";
-    const priceDisplay = firstItem?.product
-      ? formatCurrency(firstItem.product.price, currency)
-      : "No longer available";
     const quantityTotal = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
     const itemCountLabel = items.length > 1 ? ` +${items.length - 1} more` : "";
     row.innerHTML = `
@@ -77,7 +65,7 @@ function renderOrders(orders) {
       }).format(new Date(order.createdAt))}</td>
       <td>
         <div><strong>${productTitle}</strong>${itemCountLabel}</div>
-        <div class="field-hint">${priceDisplay}</div>
+        ${firstItem?.product ? "" : '<div class="field-hint">No longer available</div>'}
       </td>
       <td>${quantityTotal || 1}</td>
       <td><span class="status-pill ${order.status}">${statusLabel}</span></td>

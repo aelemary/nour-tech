@@ -200,11 +200,6 @@ function createProductCard(product) {
         ${specRight}
       </div>
       <div class="card-actions compact-actions">
-        <div class="price">${new Intl.NumberFormat("en-EG", {
-          style: "currency",
-          currency: product.currency || "EGP",
-          maximumFractionDigits: 0,
-        }).format(product.price)}</div>
       </div>
     </div>
   `;

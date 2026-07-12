@@ -118,15 +118,11 @@ function readFilters() {
 
 function filterProducts(products, filters) {
   const search = (filters.search || "").toLowerCase();
-  const min = filters.minPrice ? Number(filters.minPrice) : null;
-  const max = filters.maxPrice ? Number(filters.maxPrice) : null;
   return products.filter((product) => {
     const type = String(product.type || "").toLowerCase();
     if (filters.category && type !== filters.category) return false;
     if (filters.companyId && product.companyId !== filters.companyId) return false;
     if (search && !productText(product).includes(search)) return false;
-    if (min != null && Number(product.price || 0) < min) return false;
-    if (max != null && Number(product.price || 0) > max) return false;
     if (!includesFieldOrProductText(product, product.cpu || product.description, filters.cpu?.toLowerCase())) return false;
     if (!includesFieldOrProductText(product, product.gpu || product.description, filters.gpu?.toLowerCase())) return false;
     if (!includesFieldOrProductText(product, product.ram || product.description, filters.ram?.toLowerCase())) return false;
@@ -201,11 +197,6 @@ function createProductCard(product) {
         ${specRight}
       </div>
       <div class="card-actions compact-actions">
-        <div class="price">${new Intl.NumberFormat("en-EG", {
-          style: "currency",
-          currency: product.currency || "EGP",
-          maximumFractionDigits: 0,
-        }).format(product.price)}</div>
       </div>
     </div>
   `;
@@ -224,8 +215,8 @@ function updateHead(filters, count) {
   if (title) title.textContent = categoryLabel || "Catalog Search";
   if (subtitle) {
     subtitle.textContent = categoryLabel
-      ? `Browse ${categoryLabel.toLowerCase()} with brand, price, and spec filters.`
-      : "Refine products by keyword, brand, category, price, and visible specification text.";
+      ? `Browse ${categoryLabel.toLowerCase()} with brand and specification filters.`
+      : "Refine products by keyword, brand, category, and visible specification text.";
   }
   if (resultCount) resultCount.textContent = `${count} product${count === 1 ? "" : "s"}`;
   if (resultContext) resultContext.textContent = filters.search ? `Search: "${filters.search}"` : "";

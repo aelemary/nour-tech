@@ -58,24 +58,14 @@ function prefillUserDetails(user) {
   }
 }
 
-function formatCurrency(amount = 0, currency = "EGP") {
-  return new Intl.NumberFormat("en-EG", {
-    style: "currency",
-    currency: currency || "EGP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 function renderSummary(items) {
   const emptyEl = document.getElementById("checkout-empty");
   const contentEl = document.getElementById("checkout-content");
   const list = document.getElementById("summary-list");
-  const totalEl = document.getElementById("checkout-total");
-  if (!list || !totalEl) return;
+  if (!list) return;
 
   if (!items.length) {
     list.innerHTML = "";
-    totalEl.textContent = formatCurrency(0);
     if (emptyEl) emptyEl.hidden = false;
     if (contentEl) contentEl.hidden = true;
     return;
@@ -85,12 +75,9 @@ function renderSummary(items) {
   if (contentEl) contentEl.hidden = false;
 
   list.innerHTML = "";
-  let total = 0;
   const fragment = document.createDocumentFragment();
   items.forEach((item) => {
     const quantity = item.quantity || 1;
-    const lineTotal = quantity * item.price;
-    total += lineTotal;
     const hintParts = [];
     if (item.company?.name) hintParts.push(`Brand: ${item.company.name}`);
     if (item.type) hintParts.push(`Category: ${item.type.toUpperCase()}`);
@@ -103,13 +90,11 @@ function renderSummary(items) {
         <strong>${item.title}</strong>
         <span class="field-hint">${hintText || item.gpu || ""}</span>
       </span>
-      <span>${quantity} × ${formatCurrency(item.price, item.currency)}</span>
+      <span>Quantity: ${quantity}</span>
     `;
     fragment.appendChild(li);
   });
   list.appendChild(fragment);
-  const currency = items[0]?.currency || "EGP";
-  totalEl.textContent = formatCurrency(total, currency);
 }
 
 async function loadItems() {

@@ -611,12 +611,6 @@ textarea:focus {
   text-align: left;
 }
 
-.price {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-
 .badge {
   display: inline-flex;
   align-items: center;
@@ -795,10 +789,6 @@ footer.site-footer a {
 
 #detail-panel .detail-title {
   font-size: clamp(1.1rem, 1.8vw, 1.5rem);
-}
-
-#detail-panel .price {
-  font-size: 0.95rem;
 }
 
 #detail-panel .panel h2,
@@ -1488,7 +1478,4 @@ body.page-main main {
     gap: 0.35rem;
   }
 
-  .compact-actions .price {
-    text-align: left;
-  }
 }
