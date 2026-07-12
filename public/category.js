@@ -196,8 +196,6 @@ function createProductCard(product) {
         ${specLeft}
         ${specRight}
       </div>
-      <div class="card-actions compact-actions">
-      </div>
     </div>
   `;
   card.addEventListener("click", () => {
