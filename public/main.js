@@ -11,8 +11,30 @@ const CATEGORY_LABELS = {
   gpu: "GPUs",
   cpu: "CPUs",
   hdd: "HDDs",
+  storage: "Storage",
   motherboard: "Motherboards",
+  ram: "Memory",
+  monitor: "Monitors",
+  printer: "Printers",
+  desktop: "Desktops",
+  power: "Power",
+  accessory: "Accessories",
 };
+
+const CATEGORY_ORDER = [
+  "laptop",
+  "gpu",
+  "cpu",
+  "storage",
+  "hdd",
+  "motherboard",
+  "ram",
+  "monitor",
+  "printer",
+  "desktop",
+  "power",
+  "accessory",
+];
 
 function formatCategoryLabel(type) {
   const normalized = String(type || "").trim().toLowerCase();
@@ -23,6 +45,19 @@ function formatCategoryLabel(type) {
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
   return title.endsWith("s") ? title : `${title}s`;
+}
+
+function normalizeCategory(type) {
+  const normalized = String(type || "").trim().toLowerCase();
+  return normalized || "other";
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 async function fetchJSON(url, options = {}) {
@@ -105,6 +140,36 @@ function populateCategoryFilter(products = []) {
   }
 }
 
+function setupHeaderSearch() {
+  const form = document.getElementById("header-search");
+  if (!form) return;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const search = String(new FormData(form).get("search") || "").trim();
+    const url = new URL("/category.html", window.location.origin);
+    if (search) url.searchParams.set("search", search);
+    window.location.href = url.toString();
+  });
+}
+
+function groupProducts(products) {
+  return products.reduce((acc, product) => {
+    const type = normalizeCategory(product.type);
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(product);
+    return acc;
+  }, {});
+}
+
+function orderedCategories(grouped) {
+  return [
+    ...CATEGORY_ORDER.filter((type) => grouped[type]?.length),
+    ...Object.keys(grouped)
+      .filter((type) => !CATEGORY_ORDER.includes(type))
+      .sort((a, b) => formatCategoryLabel(a).localeCompare(formatCategoryLabel(b))),
+  ];
+}
+
 function createProductCard(product) {
   const card = document.createElement("article");
   card.className = "laptop-card";
@@ -116,19 +181,19 @@ function createProductCard(product) {
   const warrantyText = product.warranty ? `${product.warranty} yr warranty` : "—";
   const specLeft =
     product.type === "laptop"
-      ? `<span><strong>GPU</strong><span>${product.gpu || "n/a"}</span></span>`
-      : `<span><strong>Details</strong><span>${detailText}</span></span>`;
+      ? `<span><strong>GPU</strong><span>${escapeHtml(product.gpu || "n/a")}</span></span>`
+      : `<span><strong>Details</strong><span>${escapeHtml(detailText)}</span></span>`;
   const specRight =
     product.type === "laptop"
-      ? `<span><strong>CPU</strong><span>${product.cpu || "n/a"}</span></span>`
-      : `<span><strong>Warranty</strong><span>${warrantyText}</span></span>`;
+      ? `<span><strong>CPU</strong><span>${escapeHtml(product.cpu || "n/a")}</span></span>`
+      : `<span><strong>Warranty</strong><span>${escapeHtml(warrantyText)}</span></span>`;
   card.innerHTML = `
-    <img class="card-thumb" src="${image}" loading="lazy" alt="${product.title}" />
+    <img class="card-thumb" src="${escapeHtml(image)}" loading="lazy" alt="${escapeHtml(product.title)}" />
     <div class="card-content">
       <div class="card-title-row">
-        <span class="badge">${brandLabel} • ${typeLabel}</span>
-        <h3 class="title-desktop">${product.title}</h3>
-        <h3 class="title-mobile">${product.shortName || product.title}</h3>
+        <span class="badge">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
+        <h3 class="title-desktop">${escapeHtml(product.title)}</h3>
+        <h3 class="title-mobile">${escapeHtml(product.shortName || product.title)}</h3>
       </div>
       <div class="spec-inline">
         ${specLeft}
@@ -188,33 +253,36 @@ function renderProducts(products) {
   }
   toggleEmptyState(true);
   const fragment = document.createDocumentFragment();
-  const grouped = products.reduce((acc, product) => {
-    const type = String(product.type || "other").toLowerCase();
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(product);
-    return acc;
-  }, {});
-  const knownOrder = Object.keys(CATEGORY_LABELS);
-  const categoryOrder = [
-    ...knownOrder.filter((type) => grouped[type]?.length),
-    ...Object.keys(grouped)
-      .filter((type) => !knownOrder.includes(type))
-      .sort((a, b) => formatCategoryLabel(a).localeCompare(formatCategoryLabel(b))),
-  ];
+  const grouped = groupProducts(products);
+  const categoryOrder = orderedCategories(grouped);
   categoryOrder.forEach((type) => {
     const items = grouped[type] || [];
     if (!items.length) return;
     const section = document.createElement("section");
-    section.className = "catalog-section";
+    section.className = "catalog-section product-rail-section";
     section.innerHTML = `
       <div class="catalog-heading">
         <h2>${formatCategoryLabel(type)}</h2>
-        <span>${items.length} item${items.length > 1 ? "s" : ""}</span>
+        <div class="rail-heading-actions">
+          <button class="rail-button" type="button" data-rail-prev aria-label="Scroll ${escapeHtml(formatCategoryLabel(type))} left">‹</button>
+          <button class="rail-button" type="button" data-rail-next aria-label="Scroll ${escapeHtml(formatCategoryLabel(type))} right">›</button>
+          <a href="/category.html?type=${encodeURIComponent(type)}">View all ${items.length}</a>
+        </div>
       </div>
-      <div class="catalog-grid"></div>
+      <div class="product-rail"></div>
     `;
-    const grid = section.querySelector(".catalog-grid");
-    items.forEach((product) => grid.appendChild(createProductCard(product)));
+    const rail = section.querySelector(".product-rail");
+    items.slice(0, 16).forEach((product) => rail.appendChild(createProductCard(product)));
+    const prev = section.querySelector("[data-rail-prev]");
+    const next = section.querySelector("[data-rail-next]");
+    const scrollRail = (direction) => {
+      rail.scrollBy({
+        left: direction * Math.max(rail.clientWidth * 0.85, 260),
+        behavior: "smooth",
+      });
+    };
+    if (prev) prev.addEventListener("click", () => scrollRail(-1));
+    if (next) next.addEventListener("click", () => scrollRail(1));
     fragment.appendChild(section);
   });
   results.appendChild(fragment);
@@ -224,43 +292,11 @@ async function init() {
   setYear();
   inventoryStatusEl = document.getElementById("inventory-status");
   updateCartCount();
+  setupHeaderSearch();
   try {
-    const inventoryPromise = loadInventory();
-    const companiesPromise = loadCompanies().catch(() => []);
-    const [inventory, companies] = await Promise.all([inventoryPromise, companiesPromise]);
+    const inventory = await loadInventory();
     state.allProducts = inventory || [];
-    state.companies = companies || [];
-    populateCompanyFilter(state.companies);
-    populateCategoryFilter(inventory || []);
     renderProducts(inventory);
-    const form = document.getElementById("filter-form");
-    const resetButton = document.getElementById("filter-reset");
-    if (form) {
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const formData = new FormData(form);
-        const params = Object.fromEntries(formData.entries());
-        showInventoryStatus("Loading fresh results…");
-        const results = await loadInventory(params);
-        renderProducts(results);
-        if (!results.length) {
-          showInventoryStatus("No products matched that search.", "error");
-        } else {
-          showInventoryStatus("Inventory updated.");
-        }
-      });
-    }
-    if (resetButton && form) {
-      resetButton.addEventListener("click", async () => {
-        form.reset();
-        populateCompanyFilter(state.companies);
-        populateCategoryFilter(state.allProducts);
-        showInventoryStatus("Resetting filters…");
-        const results = await loadInventory();
-        renderProducts(results);
-        showInventoryStatus("Showing all products.");
-      });
-    }
   } catch (error) {
     console.error(error);
     showInventoryStatus("Could not load inventory right now.", "error");

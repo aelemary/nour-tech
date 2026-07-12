@@ -82,6 +82,15 @@ function renderSpec(label, value) {
   return `<div class="spec-item"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
+function normalizeSpecLabel(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[_/-]+/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function humanizeSpecKey(key) {
   return String(key || "")
     .replace(/[_-]+/g, " ")
@@ -115,6 +124,145 @@ function flattenSpecs(value, trail = [], items = [], limit = 120) {
   return items;
 }
 
+function collectSpecEntries(product) {
+  const entries = [];
+  const addObject = (source) => {
+    if (!source || typeof source !== "object" || Array.isArray(source)) return;
+    Object.entries(source).forEach(([label, value]) => {
+      if (value == null || value === "") return;
+      if (typeof value === "object") return;
+      entries.push({ label: humanizeSpecKey(label), value: String(value) });
+    });
+  };
+
+  addObject(product.specsRaw?.manual);
+  addObject(product.specsRaw?.icecat?.specs);
+  addObject(product.specsRaw?.specs);
+  addObject(product.specsRaw);
+  flattenSpecs(product.specsRaw, [], entries, 160);
+  return entries;
+}
+
+const COMMON_SPEC_FIELDS = [
+  { label: "Model", keys: ["model", "product code", "part number", "mpn"] },
+  { label: "Processor", keys: ["processor model", "processor family", "cpu", "processor"] },
+  { label: "Graphics", keys: ["discrete graphics card model", "graphics adapter", "graphics processor", "gpu", "graphics"] },
+  { label: "Memory", keys: ["internal memory", "system memory", "ram", "memory"] },
+  { label: "Memory Type", keys: ["internal memory type", "memory type", "graphics card memory type"] },
+  { label: "Storage", keys: ["total storage capacity", "ssd capacity", "storage", "hdd capacity"] },
+  { label: "Storage Type", keys: ["storage media", "ssd form factor", "drive type"] },
+  { label: "Display Size", keys: ["display diagonal", "screen size"] },
+  { label: "Display Resolution", keys: ["display resolution", "resolution"] },
+  { label: "Display Type", keys: ["panel type", "display technology", "touchscreen"] },
+  { label: "Operating System", keys: ["operating system installed", "operating system", "os"] },
+  { label: "Battery", keys: ["battery capacity", "battery technology", "number of battery cells"] },
+  { label: "Weight", keys: ["weight"] },
+  { label: "Dimensions", keys: ["width", "depth", "height", "dimensions"] },
+];
+
+const TYPE_SPEC_FIELDS = {
+  gpu: [
+    { label: "Graphics Processor", keys: ["graphics processor", "graphics processor family", "gpu"] },
+    { label: "Video Memory", keys: ["discrete graphics card memory", "graphics card memory", "memory"] },
+    { label: "Memory Bus", keys: ["memory bus"] },
+    { label: "Interface", keys: ["interface type", "pci express", "host interface"] },
+    { label: "HDMI", keys: ["hdmi ports quantity", "hdmi"] },
+    { label: "DisplayPort", keys: ["displayports quantity", "displayport"] },
+    { label: "Power", keys: ["minimum system power supply", "power consumption"] },
+  ],
+  cpu: [
+    { label: "Processor", keys: ["processor model", "processor family", "cpu"] },
+    { label: "Cores", keys: ["processor cores", "cores"] },
+    { label: "Threads", keys: ["processor threads", "threads"] },
+    { label: "Base Frequency", keys: ["processor base frequency", "base frequency"] },
+    { label: "Boost Frequency", keys: ["processor boost frequency", "turbo frequency"] },
+    { label: "Socket", keys: ["processor socket", "socket"] },
+    { label: "Cache", keys: ["processor cache", "cache"] },
+  ],
+  motherboard: [
+    { label: "Socket", keys: ["processor socket", "socket"] },
+    { label: "Chipset", keys: ["motherboard chipset", "chipset"] },
+    { label: "Memory Slots", keys: ["memory slots", "number of memory slots"] },
+    { label: "Max Memory", keys: ["maximum internal memory", "max memory"] },
+    { label: "Form Factor", keys: ["motherboard form factor", "form factor"] },
+    { label: "Networking", keys: ["ethernet lan", "wi fi", "bluetooth"] },
+  ],
+  hdd: [
+    { label: "Capacity", keys: ["hdd capacity", "ssd capacity", "storage capacity", "capacity"] },
+    { label: "Interface", keys: ["interface", "serial ata", "sata"] },
+    { label: "Drive Size", keys: ["hdd size", "drive size", "form factor"] },
+    { label: "Speed", keys: ["hdd speed", "read speed", "write speed"] },
+  ],
+};
+
+function findSpecValue(entries, keys) {
+  const normalizedKeys = keys.map(normalizeSpecLabel).filter(Boolean);
+  const exact = entries.find((entry) => normalizedKeys.includes(normalizeSpecLabel(entry.label)));
+  if (exact) return exact.value;
+  const partial = entries.find((entry) => {
+    const label = normalizeSpecLabel(entry.label);
+    return normalizedKeys.some((key) => label.includes(key) || key.includes(label));
+  });
+  return partial?.value || "";
+}
+
+function buildCuratedSpecs(product, warrantyLabel) {
+  const entries = collectSpecEntries(product);
+  const type = String(product.type || "").toLowerCase();
+  const fields = [...(TYPE_SPEC_FIELDS[type] || COMMON_SPEC_FIELDS)];
+  if (type !== "laptop") {
+    fields.unshift({ label: "Model", keys: ["model", "product code", "part number", "mpn"] });
+  }
+  const specs = [];
+  const usedLabels = new Set();
+  const usedValues = new Set();
+  const addSpec = (label, value) => {
+    const normalized = normalizeSpecLabel(label);
+    const normalizedValue = normalizeSpecLabel(value);
+    if (!value || usedLabels.has(normalized) || usedValues.has(normalizedValue)) return;
+    specs.push(renderSpec(label, value));
+    usedLabels.add(normalized);
+    usedValues.add(normalizedValue);
+  };
+
+  fields.forEach((field) => addSpec(field.label, findSpecValue(entries, field.keys)));
+
+  addSpec("Graphics", product.gpu);
+  addSpec("Processor", product.cpu);
+  addSpec("Memory", product.ram);
+  addSpec("Storage", product.storage);
+  addSpec("Display", product.display);
+  addSpec("Model", product.shortName);
+  addSpec("Warranty", warrantyLabel);
+
+  if (specs.length < 8) {
+    entries.slice(0, 16).forEach((entry) => addSpec(entry.label, entry.value));
+  }
+  return specs.slice(0, 18);
+}
+
+function buildAdvancedSpecs(product) {
+  const icecatSpecs = product.specsRaw?.icecat?.specs;
+  const curatedEntries =
+    icecatSpecs && typeof icecatSpecs === "object" && !Array.isArray(icecatSpecs)
+      ? Object.entries(icecatSpecs).map(([label, value]) => ({
+          label: humanizeSpecKey(label),
+          value: value == null ? "" : String(value),
+        }))
+      : flattenSpecs(product.specsRaw?.icecat || product.specsRaw, [], [], 500);
+  const seen = new Set();
+  const advanced = [];
+  curatedEntries.forEach((entry) => {
+    const label = String(entry.label || "").trim();
+    const value = String(entry.value || "").trim();
+    const key = `${normalizeSpecLabel(label)}:${normalizeSpecLabel(value)}`;
+    if (!label || !value || seen.has(key)) return;
+    seen.add(key);
+    advanced.push(renderSpec(label, value));
+  });
+  return advanced;
+}
+
 function showStatus(message, type = "success") {
   const container = document.getElementById("order-status");
   if (!container) return;
@@ -137,21 +285,8 @@ function renderProduct(product) {
   const description = product.description
     ? `<p class="detail-description">${product.description}</p>`
     : "";
-  const flattenedSpecs = flattenSpecs(product.specsRaw);
-  const specs = flattenedSpecs.map((entry) => renderSpec(entry.label, entry.value));
-  if (!flattenedSpecs.length) {
-    specs.push(renderSpec("GPU", product.gpu));
-    specs.push(renderSpec("CPU", product.cpu));
-    specs.push(renderSpec("RAM", product.ram));
-    specs.push(renderSpec("Storage", product.storage));
-    specs.push(renderSpec("Display", product.display));
-  }
-  if (product.shortName) {
-    specs.push(renderSpec("Model", product.shortName));
-  }
-  if (warrantyLabel) {
-    specs.push(renderSpec("Warranty", warrantyLabel));
-  }
+  const specs = buildCuratedSpecs(product, warrantyLabel);
+  const advancedSpecs = buildAdvancedSpecs(product);
   layout.innerHTML = `
     <div class="detail-main">
       <div class="detail-gallery gallery">
@@ -168,6 +303,16 @@ function renderProduct(product) {
           <div class="spec-list">
             ${specs.join("") || `<div class="field-hint">No specifications listed yet.</div>`}
           </div>
+          ${
+            advancedSpecs.length
+              ? `<button class="spec-toggle spec-toggle-bottom" type="button" data-spec-toggle aria-expanded="false" aria-controls="advanced-specs">Advanced specs</button>`
+              : ""
+          }
+          ${
+            advancedSpecs.length
+              ? `<div id="advanced-specs" class="spec-list advanced-spec-list" hidden>${advancedSpecs.join("")}</div>`
+              : ""
+          }
         </section>
       </div>
     </div>
@@ -192,7 +337,20 @@ function renderProduct(product) {
       </p>
     </aside>
   `;
+  initSpecToggle();
   initGallery();
+}
+
+function initSpecToggle() {
+  const toggle = document.querySelector("[data-spec-toggle]");
+  const advanced = document.getElementById("advanced-specs");
+  if (!toggle || !advanced) return;
+  toggle.addEventListener("click", () => {
+    const open = advanced.hidden;
+    advanced.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.textContent = open ? "Hide advanced specs" : "Advanced specs";
+  });
 }
 
 function initGallery() {

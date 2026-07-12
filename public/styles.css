@@ -85,6 +85,35 @@ nav a:hover {
   transform: translateY(-2px);
 }
 
+.header-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: min(320px, 28vw);
+}
+
+.header-search input {
+  min-width: 0;
+  height: 2.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+}
+
+.header-search button {
+  height: 2.35rem;
+  padding: 0 0.9rem;
+  border: 1px solid rgba(23, 66, 108, 0.25);
+  border-radius: 999px;
+  background: var(--accent-strong);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.header-search button:hover {
+  background: var(--accent);
+}
+
 .nav-toggle {
   display: none;
   align-items: center;
@@ -438,6 +467,85 @@ textarea:focus {
   gap: 1rem;
 }
 
+.product-rail-section {
+  overflow: hidden;
+}
+
+.rail-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.rail-heading-actions a {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.rail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(23, 66, 108, 0.22);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--accent-strong);
+  font-size: 1.2rem;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(23, 66, 108, 0.08);
+}
+
+.rail-button:hover {
+  background: rgba(87, 184, 227, 0.16);
+}
+
+.product-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(230px, 290px);
+  gap: 1rem;
+  align-items: start;
+  overflow-x: auto;
+  padding: 0.25rem 0 1rem;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.product-rail > .laptop-card {
+  scroll-snap-align: start;
+  align-self: start;
+  height: auto;
+  min-height: 0;
+}
+
+.product-rail .card-thumb {
+  max-height: 128px;
+}
+
+.product-rail .laptop-card h3 {
+  -webkit-line-clamp: 5;
+}
+
+.product-rail .spec-inline {
+  margin-top: 0.15rem;
+  max-height: 4.6rem;
+  overflow: hidden;
+}
+
+.category-page-head,
+.category-filter-panel,
+.category-results-panel {
+  margin-top: 1.25rem;
+}
+
+.category-results-grid {
+  justify-content: start;
+}
+
 .laptop-card {
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(23, 66, 108, 0.16);
@@ -768,6 +876,30 @@ body.page-main main {
   margin: 0;
 }
 
+.spec-toggle {
+  border: 1px solid rgba(23, 66, 108, 0.22);
+  border-radius: 999px;
+  background: rgba(87, 184, 227, 0.14);
+  color: var(--accent-strong);
+  padding: 0.4rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.spec-toggle:hover {
+  background: rgba(87, 184, 227, 0.24);
+}
+
+.spec-toggle-bottom {
+  justify-self: start;
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  opacity: 0.92;
+}
+
 .detail-specs-inline {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(23, 66, 108, 0.16);
@@ -779,6 +911,12 @@ body.page-main main {
   max-height: 450px;
   overflow: auto;
   padding-right: 0.35rem;
+}
+
+.advanced-spec-list {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(23, 66, 108, 0.14);
 }
 
 .detail-purchase {
@@ -1199,6 +1337,18 @@ body.page-main main {
 
   header {
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .header-search {
+    order: 3;
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  .header-search input {
+    flex: 1;
   }
 
   body.nav-open nav {
@@ -1218,6 +1368,24 @@ body.page-main main {
   .catalog-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .catalog-heading {
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .rail-heading-actions {
+    gap: 0.35rem;
+  }
+
+  .rail-heading-actions a {
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .product-rail {
+    grid-auto-columns: minmax(220px, 82vw);
   }
 
   .laptop-card {
@@ -1293,6 +1461,10 @@ body.page-main main {
   .catalog-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .product-rail {
+    grid-auto-columns: minmax(220px, 82vw);
   }
 
   .laptop-card {
