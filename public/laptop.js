@@ -287,9 +287,6 @@ function buildCuratedSpecs(product, warrantyLabel) {
   addSpec("Model", product.shortName);
   addSpec("Warranty", warrantyLabel);
 
-  if (specs.length < 8) {
-    entries.slice(0, 16).forEach((entry) => addSpec(entry.label, entry.value));
-  }
   return specs.slice(0, 18);
 }
 
@@ -346,36 +343,34 @@ function renderProduct(product) {
   const specs = buildCuratedSpecs(product, warrantyLabel);
   const advancedSpecs = buildAdvancedSpecs(product);
   layout.innerHTML = `
-    <div class="detail-main">
-      <div class="detail-gallery gallery">
-        ${renderImages(product.images, product.title)}
+    <div class="detail-gallery gallery">
+      ${renderImages(product.images, product.title)}
+    </div>
+    <div class="detail-copy">
+      <div class="detail-heading">
+        <p class="badge">${escapeHtml(product.company?.name || "Unassigned")} • ${escapeHtml(typeLabel)}</p>
+        <h1 class="detail-title">${escapeHtml(product.title)}</h1>
+        ${description}
       </div>
-      <div class="detail-copy">
-        <div class="detail-heading">
-          <h1 class="detail-title">${escapeHtml(product.title)}</h1>
-          <p class="badge">${escapeHtml(product.company?.name || "Unassigned")} • ${escapeHtml(typeLabel)}</p>
-          ${description}
+      <section class="detail-specs detail-specs-inline">
+        <h2>Specifications</h2>
+        <div class="spec-list">
+          ${specs.join("") || `<div class="field-hint">No specifications listed yet.</div>`}
         </div>
-        <section class="detail-specs detail-specs-inline">
-          <h2>Specifications</h2>
-          <div class="spec-list">
-            ${specs.join("") || `<div class="field-hint">No specifications listed yet.</div>`}
-          </div>
-          ${
-            advancedSpecs.length
-              ? `<button class="spec-toggle spec-toggle-bottom" type="button" data-spec-toggle aria-expanded="false" aria-controls="advanced-specs">Advanced specs</button>`
-              : ""
-          }
-          ${
-            advancedSpecs.length
-              ? `<div id="advanced-specs" class="spec-list advanced-spec-list" hidden>${advancedSpecs.join("")}</div>`
-              : ""
-          }
-        </section>
-      </div>
+        ${
+          advancedSpecs.length
+            ? `<button class="spec-toggle spec-toggle-bottom" type="button" data-spec-toggle aria-expanded="false" aria-controls="advanced-specs">Advanced specs</button>`
+            : ""
+        }
+        ${
+          advancedSpecs.length
+            ? `<div id="advanced-specs" class="spec-list advanced-spec-list" hidden>${advancedSpecs.join("")}</div>`
+            : ""
+        }
+      </section>
     </div>
     <aside class="panel detail-purchase">
-      <h2>Purchase Options</h2>
+      <h2>Order Options</h2>
       <p class="field-hint">
         Submit your order details and our team will contact you to confirm availability.
       </p>

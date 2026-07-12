@@ -170,35 +170,29 @@ function orderedCategories(grouped) {
   ];
 }
 
+function productSummary(product) {
+  const title = String(product.title || "").trim().toLowerCase();
+  return [product.shortName, product.description, product.storage, product.ram]
+    .map((value) => String(value || "").trim())
+    .find((value) => value && value.toLowerCase() !== title) || "";
+}
+
 function createProductCard(product) {
   const card = document.createElement("article");
-  card.className = "laptop-card";
+  card.className = "product-card rail-card";
   const typeLabel = formatCategoryLabel(product.type);
   const brandLabel = product.company?.name || "Unassigned";
   const image =
     product.images?.[0] || `https://placehold.co/600x400?text=${encodeURIComponent(typeLabel)}`;
-  const detailText = product.shortName || product.description || "—";
-  const warrantyText = product.warranty ? `${product.warranty} yr warranty` : "—";
-  const specLeft =
-    product.type === "laptop"
-      ? `<span><strong>GPU</strong><span>${escapeHtml(product.gpu || "n/a")}</span></span>`
-      : `<span><strong>Details</strong><span>${escapeHtml(detailText)}</span></span>`;
-  const specRight =
-    product.type === "laptop"
-      ? `<span><strong>CPU</strong><span>${escapeHtml(product.cpu || "n/a")}</span></span>`
-      : `<span><strong>Warranty</strong><span>${escapeHtml(warrantyText)}</span></span>`;
+  const summary = productSummary(product);
   card.innerHTML = `
-    <img class="card-thumb" src="${escapeHtml(image)}" loading="lazy" alt="${escapeHtml(product.title)}" />
-    <div class="card-content">
-      <div class="card-title-row">
+    <div class="product-media">
+      <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
+    </div>
+    <div class="product-body">
         <span class="badge">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
-        <h3 class="title-desktop">${escapeHtml(product.title)}</h3>
-        <h3 class="title-mobile">${escapeHtml(product.shortName || product.title)}</h3>
-      </div>
-      <div class="spec-inline">
-        ${specLeft}
-        ${specRight}
-      </div>
+        <h3 class="product-title">${escapeHtml(product.title)}</h3>
+        ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
     </div>
   `;
   const detailUrl = `/laptop.html?id=${encodeURIComponent(product.id)}`;
