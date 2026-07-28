@@ -5,78 +5,170 @@ const state = {
   companies: [],
 };
 
-const CATEGORY_LABELS = {
-  laptop: "Laptops",
-  gpu: "GPUs",
-  cpu: "CPUs",
-  hdd: "HDDs",
-  storage: "Storage",
-  motherboard: "Motherboards",
-  ram: "Memory",
-  monitor: "Monitors",
-  printer: "Printers",
-  desktop: "Desktops",
-  power: "Power",
-  accessory: "Accessories",
+const CATEGORY_META = {
+  laptop: { label: "لابتوبات", icon: "💻" },
+  gpu: { label: "كروت شاشة", icon: "🎮" },
+  cpu: { label: "معالجات", icon: "🧠" },
+  motherboard: { label: "لوحات أم", icon: "🧩" },
+  ram: { label: "رامات", icon: "⚡" },
+  storage: { label: "وحدات تخزين", icon: "💾" },
+  hdd: { label: "هاردات", icon: "🗄️" },
+  monitor: { label: "شاشات", icon: "🖥️" },
+  printer: { label: "طابعات", icon: "🖨️" },
+  desktop: { label: "أجهزة مكتبية", icon: "🧰" },
+  power: { label: "مزودات طاقة", icon: "🔌" },
+  accessory: { label: "إكسسوارات", icon: "⌨️" },
 };
+
+const CATEGORY_ORDER = [
+  "laptop",
+  "gpu",
+  "cpu",
+  "motherboard",
+  "ram",
+  "storage",
+  "hdd",
+  "monitor",
+  "desktop",
+  "power",
+  "accessory",
+  "printer",
+];
+
+const moneyFormatter = new Intl.NumberFormat("ar-EG", {
+  style: "currency",
+  currency: "EGP",
+  maximumFractionDigits: 0,
+});
 
 function escapeHtml(value = "") {
   return String(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-function formatCategoryLabel(type) {
-  const normalized = String(type || "").trim().toLowerCase();
-  if (!normalized) return "Products";
-  if (CATEGORY_LABELS[normalized]) return CATEGORY_LABELS[normalized];
-  const title = normalized
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-  return title.endsWith("s") ? title : `${title}s`;
+function normalizeType(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function metaFor(type) {
+  const normalized = normalizeType(type);
+  return CATEGORY_META[normalized] || {
+    label: normalized
+      ? normalized.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
+      : "المنتجات",
+    icon: "🛍️",
+  };
+}
+
+function formatPrice(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? moneyFormatter.format(amount) : "";
+}
+
+function getOldPrice(product) {
+  return product.oldPrice ?? product.old_price ?? null;
+}
+
+function getSaleLabel(product) {
+  return product.saleLabel ?? product.sale_label ?? "";
+}
+
+function isFeatured(product) {
+  return Boolean(product.isFeatured ?? product.is_featured);
+}
+
+function productSummary(product) {
+  return [product.cpu, product.gpu, product.ram, product.storage]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" • ");
 }
 
 async function fetchJSON(url, options = {}) {
-  const res = await fetch(url, { credentials: "include", ...options });
-  if (!res.ok) {
-    const text = await res.text();
-    let message = text;
-    try {
-      const data = JSON.parse(text);
-      if (data && data.error) message = data.error;
-    } catch (error) {
-      // ignore parse errors
-    }
-    const err = new Error(message || `Request failed with status ${res.status}`);
-    err.status = res.status;
-    throw err;
+  const response = await fetch(url, { credentials: "include", ...options });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed with status ${response.status}`);
   }
-  return res.json();
-}
-
-function setYear() {
-  const yearEl = document.getElementById("year");
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
+  return response.json();
 }
 
 function updateCartCount() {
-  if (!window.Cart) return;
   const badge = document.getElementById("cart-count");
-  if (badge) badge.textContent = window.Cart.count();
+  if (badge && window.Cart) badge.textContent = window.Cart.count();
 }
 
-function setupHeaderSearch() {
-  const form = document.getElementById("header-search");
-  if (!form) return;
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const search = String(new FormData(form).get("search") || "").trim();
-    const input = document.getElementById("filter-search");
-    if (input) input.value = search;
-    renderProducts();
+function addToCart(product, button) {
+  if (!window.Cart) return;
+  window.Cart.add(product.id);
+  updateCartCount();
+  const old = button.textContent;
+  button.textContent = "✓";
+  button.disabled = true;
+  setTimeout(() => {
+    button.textContent = old;
+    button.disabled = false;
+  }, 900);
+}
+
+function createProductCard(product) {
+  const card = document.createElement("article");
+  card.className = "product-card";
+  card.tabIndex = 0;
+
+  const meta = metaFor(product.type);
+  const brand = product.company?.name || "Nour Tech";
+  const image = product.images?.[0] || "/data/nourtechsmall.png";
+  const price = formatPrice(product.price);
+  const oldPriceValue = getOldPrice(product);
+  const oldPrice = formatPrice(oldPriceValue);
+  const saleLabel = getSaleLabel(product);
+  const featured = isFeatured(product);
+  const hasStock = Object.prototype.hasOwnProperty.call(product, "stock");
+  const stockNumber = Number(product.stock);
+  const inStock = !hasStock || !Number.isFinite(stockNumber) || stockNumber > 0;
+  const summary = productSummary(product);
+
+  card.innerHTML = `
+    <div class="product-flags">
+      ${saleLabel ? `<span class="product-flag sale">${escapeHtml(saleLabel)}</span>` : ""}
+      ${featured ? `<span class="product-flag featured">مميز</span>` : ""}
+    </div>
+    <div class="product-media"><img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title || "منتج")}" /></div>
+    <div class="product-body">
+      <span class="product-brand">${escapeHtml(brand)} • ${escapeHtml(meta.label)}</span>
+      <h3 class="product-title">${escapeHtml(product.title || "منتج بدون اسم")}</h3>
+      ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <span class="product-stock ${inStock ? "" : "out"}">${inStock ? "● متوفر للطلب" : "● غير متوفر حاليًا"}</span>
+      <div class="product-price-row">
+        <div class="product-price">
+          ${price ? `<strong>${price}</strong>${oldPrice && Number(oldPriceValue) > Number(product.price) ? `<del>${oldPrice}</del>` : ""}` : `<span class="product-contact-price">تواصل لمعرفة السعر</span>`}
+        </div>
+        <button class="product-cart-btn" type="button" aria-label="إضافة للسلة" ${inStock ? "" : "disabled"}>🛒</button>
+      </div>
+    </div>
+  `;
+
+  const url = `/laptop.html?id=${encodeURIComponent(product.id)}`;
+  const open = () => { window.location.href = url; };
+  card.addEventListener("click", open);
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open();
+    }
   });
+  card.querySelector(".product-cart-btn")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    addToCart(product, event.currentTarget);
+  });
+
+  return card;
 }
 
 function productText(product) {
@@ -86,8 +178,8 @@ function productText(product) {
     product.description,
     product.company?.name,
     product.type,
-    product.gpu,
     product.cpu,
+    product.gpu,
     product.ram,
     product.storage,
     product.display,
@@ -98,73 +190,87 @@ function productText(product) {
     .toLowerCase();
 }
 
-function includesText(value, search) {
-  if (!search) return true;
-  return String(value || "").toLowerCase().includes(search);
-}
-
-function includesFieldOrProductText(product, fieldValue, search) {
-  if (!search) return true;
-  return includesText(fieldValue, search) || productText(product).includes(search);
-}
-
-function productSummary(product) {
-  const title = String(product.title || "").trim().toLowerCase();
-  return [product.shortName, product.description, product.storage, product.ram]
-    .map((value) => String(value || "").trim())
-    .find((value) => value && value.toLowerCase() !== title) || "";
-}
-
 function readFilters() {
   const form = document.getElementById("category-filter-form");
-  const data = form ? Object.fromEntries(new FormData(form).entries()) : {};
+  if (!form) return {};
   return Object.fromEntries(
-    Object.entries(data).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
+    Array.from(new FormData(form).entries()).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
   );
 }
 
+function includesValue(product, value, search) {
+  if (!search) return true;
+  const needle = String(search).toLowerCase();
+  return String(value || "").toLowerCase().includes(needle) || productText(product).includes(needle);
+}
+
 function filterProducts(products, filters) {
-  const search = (filters.search || "").toLowerCase();
+  const search = String(filters.search || "").toLowerCase();
+  const minPrice = Number(filters.minPrice);
+  const maxPrice = Number(filters.maxPrice);
+
   return products.filter((product) => {
-    const type = String(product.type || "").toLowerCase();
+    const type = normalizeType(product.type);
+    const price = Number(product.price);
+    const stock = Number(product.stock);
+
     if (filters.category && type !== filters.category) return false;
     if (filters.companyId && product.companyId !== filters.companyId) return false;
     if (search && !productText(product).includes(search)) return false;
-    if (!includesFieldOrProductText(product, product.cpu || product.description, filters.cpu?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.gpu || product.description, filters.gpu?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.ram || product.description, filters.ram?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.storage || product.description, filters.storage?.toLowerCase())) return false;
+    if (!includesValue(product, product.cpu, filters.cpu)) return false;
+    if (!includesValue(product, product.gpu, filters.gpu)) return false;
+    if (!includesValue(product, product.ram, filters.ram)) return false;
+    if (!includesValue(product, product.storage, filters.storage)) return false;
+    if (Number.isFinite(minPrice) && minPrice > 0 && (!Number.isFinite(price) || price < minPrice)) return false;
+    if (Number.isFinite(maxPrice) && maxPrice > 0 && (!Number.isFinite(price) || price > maxPrice)) return false;
+    if (filters.inStock && Object.prototype.hasOwnProperty.call(product, "stock") && Number.isFinite(stock) && stock <= 0) return false;
     return true;
   });
 }
 
-function populateCategorySelect(products = []) {
+function sortProducts(products) {
+  const mode = document.getElementById("sort-products")?.value || "featured";
+  return [...products].sort((a, b) => {
+    if (mode === "featured") {
+      const featuredDiff = Number(isFeatured(b)) - Number(isFeatured(a));
+      if (featuredDiff) return featuredDiff;
+      return Number(b.sortOrder ?? b.sort_order ?? 0) - Number(a.sortOrder ?? a.sort_order ?? 0);
+    }
+    if (mode === "price-asc") {
+      const aPrice = Number(a.price) > 0 ? Number(a.price) : Number.MAX_SAFE_INTEGER;
+      const bPrice = Number(b.price) > 0 ? Number(b.price) : Number.MAX_SAFE_INTEGER;
+      return aPrice - bPrice;
+    }
+    if (mode === "price-desc") return Number(b.price || 0) - Number(a.price || 0);
+    if (mode === "name") return String(a.title || "").localeCompare(String(b.title || ""), "ar");
+    return String(b.createdAt || b.created_at || "").localeCompare(String(a.createdAt || a.created_at || ""));
+  });
+}
+
+function populateCategories(products) {
   const select = document.getElementById("filter-category");
   if (!select) return;
   const current = select.value;
-  const dynamicTypes = Array.from(
-    new Set(products.map((product) => String(product.type || "").trim().toLowerCase()).filter(Boolean))
-  );
-  const knownOrder = Object.keys(CATEGORY_LABELS);
-  const types = [
-    ...knownOrder.filter((type) => dynamicTypes.includes(type)),
-    ...dynamicTypes.filter((type) => !knownOrder.includes(type)).sort(),
+  const types = Array.from(new Set(products.map((product) => normalizeType(product.type)).filter(Boolean)));
+  const ordered = [
+    ...CATEGORY_ORDER.filter((type) => types.includes(type)),
+    ...types.filter((type) => !CATEGORY_ORDER.includes(type)).sort(),
   ];
-  select.innerHTML = `<option value="">All categories</option>`;
-  types.forEach((type) => {
+  select.innerHTML = '<option value="">كل الأقسام</option>';
+  ordered.forEach((type) => {
     const option = document.createElement("option");
     option.value = type;
-    option.textContent = formatCategoryLabel(type);
+    option.textContent = metaFor(type).label;
     select.appendChild(option);
   });
-  if (current && types.includes(current)) select.value = current;
+  if (current && ordered.includes(current)) select.value = current;
 }
 
-function populateCompanySelect(companies = []) {
+function populateCompanies(companies) {
   const select = document.getElementById("filter-company");
   if (!select) return;
   const current = select.value;
-  select.innerHTML = `<option value="">Any brand</option>`;
+  select.innerHTML = '<option value="">كل البراندات</option>';
   companies.forEach((company) => {
     const option = document.createElement("option");
     option.value = company.id;
@@ -174,111 +280,94 @@ function populateCompanySelect(companies = []) {
   if (current && companies.some((company) => company.id === current)) select.value = current;
 }
 
-function createProductCard(product) {
-  const card = document.createElement("article");
-  card.className = "product-card";
-  const typeLabel = formatCategoryLabel(product.type);
-  const brandLabel = product.company?.name || "Unassigned";
-  const image =
-    product.images?.[0] || `https://placehold.co/600x400?text=${encodeURIComponent(typeLabel)}`;
-  const summary = productSummary(product);
-  card.innerHTML = `
-    <div class="product-media">
-      <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
-    </div>
-    <div class="product-body">
-        <span class="badge">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
-        <h3 class="product-title">${escapeHtml(product.title)}</h3>
-        ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
-    </div>
-  `;
-  card.addEventListener("click", () => {
-    window.location.href = `/laptop.html?id=${encodeURIComponent(product.id)}`;
-  });
-  return card;
-}
-
 function updateHead(filters, count) {
   const title = document.getElementById("category-title");
   const subtitle = document.getElementById("category-subtitle");
-  const resultCount = document.getElementById("result-count");
-  const resultContext = document.getElementById("result-context");
-  const categoryLabel = filters.category ? formatCategoryLabel(filters.category) : "";
-  if (title) title.textContent = categoryLabel || "Catalog Search";
-  if (subtitle) {
-    subtitle.textContent = categoryLabel
-      ? `Browse ${categoryLabel.toLowerCase()} with brand and specification filters.`
-      : "Refine products by keyword, brand, category, and visible specification text.";
-  }
-  if (resultCount) resultCount.textContent = `${count} product${count === 1 ? "" : "s"}`;
-  if (resultContext) resultContext.textContent = filters.search ? `Search: "${filters.search}"` : "";
-  document.title = `Nour Tech | ${categoryLabel || "Catalog Search"}`;
+  const countNode = document.getElementById("result-count");
+  const context = document.getElementById("result-context");
+  const category = filters.category ? metaFor(filters.category).label : "كل المنتجات";
+
+  if (title) title.textContent = category;
+  if (subtitle) subtitle.textContent = filters.search
+    ? `نتائج البحث عن: ${filters.search}`
+    : `تصفح ${category} واختر المواصفات المناسبة.`;
+  if (countNode) countNode.textContent = `${count} منتج`;
+  if (context) context.textContent = filters.search ? `البحث: “${filters.search}”` : "";
+  document.title = `نور تكنولوجي | ${category}`;
 }
 
 function renderProducts() {
   const results = document.getElementById("category-results");
   const empty = document.getElementById("category-empty");
   if (!results) return;
+
   const filters = readFilters();
-  const filtered = filterProducts(state.products, filters);
+  const filtered = sortProducts(filterProducts(state.products, filters));
   results.innerHTML = "";
-  if (!filtered.length) {
-    if (empty) empty.hidden = false;
-  } else {
-    if (empty) empty.hidden = true;
-    const fragment = document.createDocumentFragment();
-    filtered.forEach((product) => fragment.appendChild(createProductCard(product)));
-    results.appendChild(fragment);
-  }
+  filtered.forEach((product) => results.appendChild(createProductCard(product)));
+  if (empty) empty.hidden = filtered.length > 0;
   updateHead(filters, filtered.length);
 }
 
-function applyInitialParams() {
+function applyUrlParams() {
   const params = new URLSearchParams(window.location.search);
   const type = params.get("type") || "";
   const search = params.get("search") || "";
-  const categoryInput = document.getElementById("filter-category");
+  const category = document.getElementById("filter-category");
   const searchInput = document.getElementById("filter-search");
-  const headerInput = document.querySelector("#header-search input[name='search']");
-  if (categoryInput && type) categoryInput.value = type;
+  const headerInput = document.querySelector('#header-search input[name="search"]');
+  if (category && type) category.value = type;
   if (searchInput && search) searchInput.value = search;
   if (headerInput && search) headerInput.value = search;
 }
 
+function setupHeaderSearch() {
+  const form = document.getElementById("header-search");
+  if (!form) return;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const value = String(new FormData(form).get("search") || "").trim();
+    const filterInput = document.getElementById("filter-search");
+    if (filterInput) filterInput.value = value;
+    renderProducts();
+  });
+}
+
 async function init() {
-  setYear();
   updateCartCount();
   setupHeaderSearch();
+
   const form = document.getElementById("category-filter-form");
-  const resetButton = document.getElementById("filter-reset");
+  const reset = document.getElementById("filter-reset");
+  const sort = document.getElementById("sort-products");
+
   try {
     const [products, companies] = await Promise.all([
       fetchJSON(`${API_BASE}/products`),
       fetchJSON(`${API_BASE}/companies`).catch(() => []),
     ]);
-    state.products = products || [];
-    state.companies = companies || [];
-    populateCategorySelect(state.products);
-    populateCompanySelect(state.companies);
-    applyInitialParams();
+    state.products = Array.isArray(products) ? products : [];
+    state.companies = Array.isArray(companies) ? companies : [];
+    populateCategories(state.products);
+    populateCompanies(state.companies);
+    applyUrlParams();
     renderProducts();
   } catch (error) {
     console.error(error);
     const status = document.getElementById("category-status");
-    if (status) status.innerHTML = `<div class="toast error">Could not load catalog data.</div>`;
+    if (status) status.innerHTML = '<div class="toast error">تعذر تحميل بيانات المنتجات حاليًا.</div>';
   }
-  if (form) {
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      renderProducts();
-    });
-  }
-  if (resetButton && form) {
-    resetButton.addEventListener("click", () => {
-      form.reset();
-      renderProducts();
-    });
-  }
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    renderProducts();
+  });
+  reset?.addEventListener("click", () => {
+    form?.reset();
+    history.replaceState({}, "", "/category.html");
+    renderProducts();
+  });
+  sort?.addEventListener("change", renderProducts);
 }
 
 document.addEventListener("DOMContentLoaded", init);

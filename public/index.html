@@ -1,118 +1,172 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-916CLWK6N4"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-916CLWK6N4');
-  </script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-916CLWK6N4"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-916CLWK6N4');
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nour Tech</title>
+    <meta name="description" content="نور تكنولوجي لابتوبات، كروت شاشة، مكونات كمبيوتر وتجميعات احترافية بضمان وشحن لجميع المحافظات." />
+    <title>نور تكنولوجي | أجهزة ومكونات الكمبيوتر</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/storefront.css" />
     <link rel="icon" type="image/png" href="/data/nourtechsmall.png" />
   </head>
-  <body class="page-main">
-    <header>
-      <a class="logo" href="/" aria-label="Nour Tech home">
-        <img src="/data/nourtechlogo.png" alt="Nour Tech logo" class="logo-mark" />
-      </a>
-      <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">Menu</button>
-      <nav id="site-nav">
-        <a href="/index.html">Inventory</a>
-        <a href="/contact.html">Contact</a>
-<a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
-        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
-        <a href="/admin.html" data-requires-role="admin">Admin</a>
-        <span id="nav-user" class="nav-user" hidden></span>
-        <a href="/signup.html" id="nav-signup">Sign Up</a>
-        <a href="/login.html" id="nav-auth">Login</a>
-      </nav>
-      <form id="header-search" class="header-search" role="search">
-        <input type="search" name="search" placeholder="Search catalog" aria-label="Search catalog" />
-        <button type="submit">Search</button>
-      </form>
+  <body class="page-main storefront-theme">
+    <div class="store-announcement">
+      <span>🚚 شحن لجميع المحافظات</span>
+      <span>🛡️ منتجات أصلية بضمان</span>
+      <span>💬 دعم فني قبل وبعد البيع</span>
+      <span>📞 للطلب: 01034898787</span>
+    </div>
+
+    <header class="store-header">
+      <div class="store-header-main">
+        <button class="nav-toggle" type="button" aria-label="فتح القائمة" aria-expanded="false" aria-controls="site-nav">☰</button>
+
+        <a class="logo" href="/" aria-label="العودة للرئيسية">
+          <img src="/data/nourtechlogo.png" alt="Nour Tech" class="logo-mark" />
+        </a>
+
+        <form id="header-search" class="store-search" role="search">
+          <input type="search" name="search" placeholder="ابحث عن لابتوب، كارت شاشة أو مكوّن..." aria-label="البحث في المنتجات" />
+          <button type="submit" aria-label="بحث">⌕</button>
+        </form>
+
+        <div class="store-actions">
+          <a class="store-action" href="/account.html" id="nav-account" data-requires-auth="true">
+            <span class="store-action-icon">👤</span>
+            <span>حسابي</span>
+          </a>
+          <a class="store-action" href="/signup.html" id="nav-signup">
+            <span class="store-action-icon">＋</span>
+            <span>حساب جديد</span>
+          </a>
+          <a class="store-action" href="/login.html" id="nav-auth">
+            <span class="store-action-icon">↪</span>
+            <span>دخول</span>
+          </a>
+          <span id="nav-user" class="nav-user" hidden></span>
+          <a class="store-action" href="/cart.html">
+            <span class="store-action-icon">🛒</span>
+            <span>السلة</span>
+            <span id="cart-count" class="cart-count">0</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="store-nav-wrap">
+        <nav id="site-nav" class="store-nav">
+          <a class="shop-all" href="/category.html">كل المنتجات</a>
+          <a href="/category.html?type=laptop">لابتوبات</a>
+          <a href="/category.html?type=gpu">كروت شاشة</a>
+          <a href="/category.html?type=cpu">معالجات</a>
+          <a href="/category.html?type=motherboard">لوحات أم</a>
+          <a href="/category.html?type=ram">رامات</a>
+          <a href="/category.html?type=storage">وحدات تخزين</a>
+          <a href="/category.html?type=monitor">شاشات</a>
+          <a href="/category.html?type=accessory">إكسسوارات</a>
+          <a href="/contact.html">تواصل معنا</a>
+          <a href="/admin.html" data-requires-role="admin">لوحة الإدارة</a>
+        </nav>
+      </div>
     </header>
 
-    <main>
-      <section class="panel" id="inventory">
-        <div class="inventory-header">
-          <div>
-            <h1>Product Catalog</h1>
+    <main class="store-main">
+      <section class="store-hero" aria-label="عروض نور تكنولوجي">
+        <div class="store-hero-copy">
+          <p class="store-hero-kicker">NOUR TECH GAMING & HARDWARE</p>
+          <h1 id="hero-title">قوة تستحقها في كل لعبة وكل مشروع</h1>
+          <p id="hero-description">اختار جهازك أو مكونات تجميعتك من تشكيلة احترافية، مع ضمان موثق ودعم يساعدك تختار القطع المناسبة بدون تعقيد.</p>
+          <div class="store-hero-actions">
+            <a class="store-btn store-btn-light" href="/category.html">تسوق الآن</a>
+            <a class="store-btn store-btn-outline" href="https://wa.me/201034898787" target="_blank" rel="noopener noreferrer" style="color:#fff;border-color:rgba(255,255,255,.45);background:transparent">استشارة واتساب</a>
           </div>
         </div>
+        <div class="store-hero-visual">
+          <div class="hero-placeholder" id="hero-placeholder">
+            <img id="hero-product-image" src="/data/nourtechlogo.png" alt="منتجات نور تكنولوجي" />
+          </div>
+        </div>
+      </section>
+
+      <section class="store-benefits" aria-label="مميزات نور تكنولوجي">
+        <div class="store-benefit"><span class="store-benefit-icon">✅</span><div><strong>منتجات أصلية</strong><small>مصادر موثوقة وضمان واضح</small></div></div>
+        <div class="store-benefit"><span class="store-benefit-icon">🚚</span><div><strong>شحن سريع</strong><small>لجميع المحافظات</small></div></div>
+        <div class="store-benefit"><span class="store-benefit-icon">🧰</span><div><strong>توافق مضمون</strong><small>مساعدة في اختيار القطع</small></div></div>
+        <div class="store-benefit"><span class="store-benefit-icon">🎧</span><div><strong>دعم فني</strong><small>قبل وبعد الشراء</small></div></div>
+      </section>
+
+      <section class="store-section" aria-labelledby="categories-title">
+        <div class="store-section-heading">
+          <div>
+            <h2 id="categories-title">تسوق حسب القسم</h2>
+            <p>وصل للمنتج اللي محتاجه بسرعة</p>
+          </div>
+          <a class="store-section-link" href="/category.html">عرض الكل ←</a>
+        </div>
+        <div id="category-grid" class="category-grid"></div>
+      </section>
+
+      <section class="store-section" aria-labelledby="featured-title">
+        <div class="store-section-heading">
+          <div>
+            <h2 id="featured-title">اختيارات مميزة</h2>
+            <p>أحدث وأقوى المنتجات المتاحة في الكتالوج</p>
+          </div>
+          <a class="store-section-link" href="/category.html">كل المنتجات ←</a>
+        </div>
         <div id="inventory-status" class="order-status"></div>
+        <div id="featured-products" class="product-grid"></div>
+      </section>
+
+      <section class="store-section" id="inventory" aria-labelledby="catalog-title">
+        <div class="store-section-heading">
+          <div>
+            <h2 id="catalog-title">تصفح الكتالوج</h2>
+            <p>منتجات مرتبة حسب الفئة لتجربة أسهل</p>
+          </div>
+        </div>
         <div id="results" class="catalog-stack"></div>
         <div id="empty" class="empty-state" hidden>
-          Nothing matched that search. Try a different keyword or come back soon for fresh stock.
+          لا توجد منتجات مطابقة حاليًا. جرّب البحث بكلمة مختلفة أو تواصل معنا لمعرفة التوفر.
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <div class="footer-main">
-        <a href="/" class="footer-logo-link" aria-label="Nour Tech home">
-          <img src="/data/nourtechlogo.png" alt="Nour Tech" class="footer-logo" />
-        </a>
-        <div class="footer-socials">
-          <a
-            href="https://www.facebook.com/share/1BJq8qdpZs/"
-            class="footer-social"
-            aria-label="Facebook"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <img src="/data/facebook.png" alt="" class="footer-social-icon footer-social-image" />
-          </a>
-          <a
-            href="https://x.com/"
-            class="footer-social"
-            aria-label="Twitter"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <svg viewBox="0 0 24 24" class="footer-social-icon" aria-hidden="true">
-              <path d="M18.9 2H22l-6.8 7.8L23 22h-6.2l-4.8-6.3L6.6 22H3.5l7.3-8.3L1 2h6.3l4.3 5.7L18.9 2z" />
-            </svg>
-          </a>
-          <a
-            href="#"
-            class="footer-social"
-            id="footer-whatsapp-link"
-            aria-label="WhatsApp"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <svg viewBox="0 0 24 24" class="footer-social-icon" aria-hidden="true">
-              <path d="M20 11.2C20 6.7 16.4 3 12 3S4 6.7 4 11.2c0 1.8.6 3.5 1.6 4.8L4.5 21l5-1.3c1.1.6 2.4.9 3.6.9 4.4 0 7.9-3.7 7.9-9.4zm-8 7.4c-1.1 0-2.2-.3-3.2-.9l-.4-.2-3 .8.8-3-.3-.4c-1-1.3-1.5-2.7-1.5-4.3 0-3.4 2.7-6.2 6.1-6.2s6.1 2.8 6.1 6.2-2.7 6.2-6.1 6.2zm3.4-4.6c-.2-.1-1.3-.6-1.5-.7s-.3-.1-.4.1-.5.7-.6.8-.2.2-.4.1c-.2-.1-.9-.3-1.7-1-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.3c.1-.1.1-.2.2-.3.1-.1 0-.2 0-.3 0-.1-.4-1-.6-1.4-.2-.4-.3-.3-.4-.3h-.3c-.1 0-.3 0-.4.2-.1.2-.6.6-.6 1.5s.6 1.7.7 1.8c.1.1 1.2 2 2.9 2.7 1.8.8 1.8.5 2.2.5.4-.1 1.3-.5 1.5-.9.2-.4.2-.8.1-.9-.1-.1-.2-.1-.4-.2z" />
-            </svg>
-          </a>
+      <div class="footer-newsletter">
+        <div class="footer-newsletter-inner">
+          <div><h3>محتاج مساعدة في اختيار جهازك؟</h3><p>ابعت استخدامك وميزانيتك وفريق نور تكنولوجي يرشح لك الأنسب.</p></div>
+          <a class="store-btn store-btn-light" href="https://wa.me/201034898787" target="_blank" rel="noopener noreferrer">تواصل على واتساب</a>
         </div>
       </div>
-      <div class="footer-contact">
-        <p><strong>Sales Hotline:</strong> <span data-footer-contact="salesHotline">—</span></p>
-        <p>
-          <strong>WhatsApp:</strong>
-          <a href="#" id="footer-whatsapp-text-link" target="_blank" rel="noopener noreferrer">
-            <span data-footer-contact="whatsapp">—</span>
-          </a>
-        </p>
-        <p>
-          <strong>Email:</strong>
-          <a href="mailto:support@nourtech.example" data-footer-contact-email>support@nourtech.example</a>
-        </p>
-        <p><strong>Address:</strong> <span data-footer-contact="address">—</span></p>
+      <div class="footer-main-grid">
+        <div class="footer-col">
+          <a href="/" aria-label="Nour Tech home"><img src="/data/nourtechlogo.png" alt="Nour Tech" class="footer-logo" /></a>
+          <p>متخصصون في اللابتوبات، مكونات الكمبيوتر، التجميعات وحلول الهاردوير الاحترافية.</p>
+          <div class="footer-socials">
+            <a href="https://www.facebook.com/share/1BJq8qdpZs/" class="footer-social" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><img src="/data/facebook.png" alt="" class="footer-social-icon footer-social-image" /></a>
+            <a href="https://wa.me/201034898787" class="footer-social" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer">☏</a>
+          </div>
+        </div>
+        <div class="footer-col"><h4>الأقسام</h4><a href="/category.html?type=laptop">لابتوبات</a><a href="/category.html?type=gpu">كروت شاشة</a><a href="/category.html?type=cpu">معالجات</a><a href="/category.html?type=motherboard">لوحات أم</a><a href="/category.html?type=storage">وحدات تخزين</a></div>
+        <div class="footer-col"><h4>روابط مهمة</h4><a href="/account.html">حسابي وطلباتي</a><a href="/cart.html">سلة التسوق</a><a href="/contact.html">تواصل معنا</a><a href="/login.html">تسجيل الدخول</a></div>
+        <div class="footer-col"><h4>بيانات التواصل</h4><p><strong>المبيعات:</strong> <span data-footer-contact="salesHotline">01034898787</span></p><p><strong>واتساب:</strong> <span data-footer-contact="whatsapp">01034898787</span></p><p><strong>البريد:</strong> <a href="mailto:support@nourtecheg.com" data-footer-contact-email>support@nourtecheg.com</a></p><p><strong>العنوان:</strong> <span data-footer-contact="address">مصر</span></p></div>
       </div>
-      <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.</p>
+      <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. جميع الحقوق محفوظة.</p>
     </footer>
 
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
     <script src="/main.js" defer></script>
-      <script src="/footer.js" defer></script>
-      <script src="/nav.js" defer></script>
+    <script src="/footer.js" defer></script>
+    <script src="/nav.js" defer></script>
+    <script src="/storefront-enhance.js" defer></script>
   </body>
 </html>

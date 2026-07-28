@@ -1,111 +1,107 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-916CLWK6N4"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-916CLWK6N4');
-  </script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-916CLWK6N4"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-916CLWK6N4');
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nour Tech | Catalog Search</title>
+    <meta name="description" content="تصفح منتجات نور تكنولوجي وابحث حسب القسم والبراند والمواصفات والسعر." />
+    <title>نور تكنولوجي | المنتجات</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/storefront.css" />
     <link rel="icon" type="image/png" href="/data/nourtechsmall.png" />
   </head>
-  <body class="page-main">
-    <header>
-      <a class="logo" href="/" aria-label="Nour Tech home">
-        <img src="/data/nourtechlogo.png" alt="Nour Tech logo" class="logo-mark" />
-      </a>
-      <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">Menu</button>
-      <nav id="site-nav">
-        <a href="/index.html">Inventory</a>
-        <a href="/contact.html">Contact</a>
-        <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
-        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
-        <a href="/admin.html" data-requires-role="admin">Admin</a>
-        <span id="nav-user" class="nav-user" hidden></span>
-        <a href="/signup.html" id="nav-signup">Sign Up</a>
-        <a href="/login.html" id="nav-auth">Login</a>
-      </nav>
-      <form id="header-search" class="header-search" role="search">
-        <input type="search" name="search" placeholder="Search catalog" aria-label="Search catalog" />
-        <button type="submit">Search</button>
-      </form>
+  <body class="page-main storefront-theme">
+    <div class="store-announcement">
+      <span>🚚 شحن لجميع المحافظات</span>
+      <span>🛡️ منتجات أصلية بضمان</span>
+      <span>📞 للطلب: 01034898787</span>
+    </div>
+
+    <header class="store-header">
+      <div class="store-header-main">
+        <button class="nav-toggle" type="button" aria-label="فتح القائمة" aria-expanded="false" aria-controls="site-nav">☰</button>
+        <a class="logo" href="/" aria-label="العودة للرئيسية"><img src="/data/nourtechlogo.png" alt="Nour Tech" class="logo-mark" /></a>
+        <form id="header-search" class="store-search" role="search">
+          <input type="search" name="search" placeholder="ابحث عن منتج أو مواصفة..." aria-label="البحث في المنتجات" />
+          <button type="submit" aria-label="بحث">⌕</button>
+        </form>
+        <div class="store-actions">
+          <a class="store-action" href="/account.html" id="nav-account" data-requires-auth="true"><span class="store-action-icon">👤</span><span>حسابي</span></a>
+          <a class="store-action" href="/signup.html" id="nav-signup"><span class="store-action-icon">＋</span><span>حساب جديد</span></a>
+          <a class="store-action" href="/login.html" id="nav-auth"><span class="store-action-icon">↪</span><span>دخول</span></a>
+          <span id="nav-user" class="nav-user" hidden></span>
+          <a class="store-action" href="/cart.html"><span class="store-action-icon">🛒</span><span>السلة</span><span id="cart-count" class="cart-count">0</span></a>
+        </div>
+      </div>
+      <div class="store-nav-wrap">
+        <nav id="site-nav" class="store-nav">
+          <a class="shop-all" href="/category.html">كل المنتجات</a>
+          <a href="/category.html?type=laptop">لابتوبات</a>
+          <a href="/category.html?type=gpu">كروت شاشة</a>
+          <a href="/category.html?type=cpu">معالجات</a>
+          <a href="/category.html?type=motherboard">لوحات أم</a>
+          <a href="/category.html?type=ram">رامات</a>
+          <a href="/category.html?type=storage">وحدات تخزين</a>
+          <a href="/category.html?type=monitor">شاشات</a>
+          <a href="/contact.html">تواصل معنا</a>
+          <a href="/admin.html" data-requires-role="admin">لوحة الإدارة</a>
+        </nav>
+      </div>
     </header>
 
-    <main>
-      <section class="panel category-page-head">
-        <a class="back-link" href="/index.html">Back to catalog</a>
-        <h1 id="category-title">Catalog Search</h1>
-        <p class="inventory-subtitle" id="category-subtitle">
-          Refine products by keyword, brand, category, and visible specification text.
-        </p>
+    <main class="store-main">
+      <section class="category-page-head">
+        <a class="back-link" href="/">الرئيسية / المنتجات</a>
+        <h1 id="category-title">كل المنتجات</h1>
+        <p id="category-subtitle">استخدم الفلاتر للوصول للمواصفات المناسبة بسرعة.</p>
       </section>
 
-      <section class="panel category-filter-panel">
-        <h2>Filters</h2>
-        <form id="category-filter-form" class="filters-form">
-          <label>
-            Keywords
-            <input type="search" id="filter-search" name="search" placeholder="Title, brand, or specs" />
-          </label>
-          <label>
-            Category
-            <select id="filter-category" name="category">
-              <option value="">All categories</option>
-            </select>
-          </label>
-          <label>
-            Brand
-            <select id="filter-company" name="companyId">
-              <option value="">Any brand</option>
-            </select>
-          </label>
-          <label>
-            CPU
-            <input type="text" name="cpu" placeholder="Intel, Ryzen, Ultra..." />
-          </label>
-          <label>
-            GPU
-            <input type="text" name="gpu" placeholder="RTX, Radeon, Intel..." />
-          </label>
-          <label>
-            RAM / Memory
-            <input type="text" name="ram" placeholder="16GB, DDR5..." />
-          </label>
-          <label>
-            Storage / Capacity
-            <input type="text" name="storage" placeholder="1TB, NVMe, SATA..." />
-          </label>
-          <div class="filter-actions">
-            <button type="submit" class="btn btn-primary">Apply Filters</button>
-            <button type="button" class="btn btn-outline" id="filter-reset">Reset</button>
+      <div class="category-layout">
+        <aside class="category-filter-panel">
+          <div class="catalog-heading"><h2>تصفية النتائج</h2><button type="button" class="btn btn-outline" id="filter-reset">مسح</button></div>
+          <form id="category-filter-form" class="filters-form">
+            <label>كلمة البحث<input type="search" id="filter-search" name="search" placeholder="اسم، موديل أو مواصفة" /></label>
+            <label>القسم<select id="filter-category" name="category"><option value="">كل الأقسام</option></select></label>
+            <label>البراند<select id="filter-company" name="companyId"><option value="">كل البراندات</option></select></label>
+            <label>المعالج<input type="text" name="cpu" placeholder="Intel, Ryzen, Ultra..." /></label>
+            <label>كارت الشاشة<input type="text" name="gpu" placeholder="RTX, Radeon..." /></label>
+            <label>الرام<input type="text" name="ram" placeholder="16GB, DDR5..." /></label>
+            <label>التخزين<input type="text" name="storage" placeholder="1TB, NVMe..." /></label>
+            <label>أقل سعر<input type="number" name="minPrice" min="0" placeholder="0" /></label>
+            <label>أعلى سعر<input type="number" name="maxPrice" min="0" placeholder="بدون حد" /></label>
+            <label style="display:flex;grid-template-columns:auto 1fr;align-items:center;gap:8px"><input type="checkbox" name="inStock" value="1" style="width:auto;min-height:auto" /> المتوفر فقط</label>
+            <button type="submit" class="btn btn-primary">تطبيق الفلاتر</button>
+          </form>
+          <div id="category-status" class="order-status"></div>
+        </aside>
+
+        <section class="category-results-panel">
+          <div class="catalog-heading">
+            <div><h2 id="result-count">المنتجات</h2><span id="result-context"></span></div>
+            <div class="sort-row"><label for="sort-products">الترتيب</label><select id="sort-products"><option value="featured">المميز أولًا</option><option value="newest">الأحدث</option><option value="price-asc">السعر: من الأقل</option><option value="price-desc">السعر: من الأعلى</option><option value="name">الاسم</option></select></div>
           </div>
-        </form>
-        <div id="category-status" class="order-status"></div>
-      </section>
-
-      <section class="panel category-results-panel">
-        <div class="catalog-heading">
-          <h2 id="result-count">Products</h2>
-          <span id="result-context"></span>
-        </div>
-        <div id="category-results" class="catalog-grid category-results-grid"></div>
-        <div id="category-empty" class="empty-state" hidden>Nothing matched those filters.</div>
-      </section>
+          <div id="category-results" class="catalog-grid category-results-grid"></div>
+          <div id="category-empty" class="empty-state" hidden>لا توجد منتجات مطابقة للفلاتر الحالية.</div>
+        </section>
+      </div>
     </main>
 
     <footer class="site-footer">
-      <div class="footer-main">
-        <a href="/" class="footer-logo-link" aria-label="Nour Tech home">
-          <img src="/data/nourtechlogo.png" alt="Nour Tech" class="footer-logo" />
-        </a>
+      <div class="footer-newsletter"><div class="footer-newsletter-inner"><div><h3>مش لاقي المواصفات المطلوبة؟</h3><p>ابعت طلبك لفريق نور تكنولوجي وسنساعدك في توفيره.</p></div><a class="store-btn store-btn-light" href="https://wa.me/201034898787" target="_blank" rel="noopener noreferrer">واتساب</a></div></div>
+      <div class="footer-main-grid">
+        <div class="footer-col"><a href="/"><img src="/data/nourtechlogo.png" alt="Nour Tech" class="footer-logo" /></a><p>أجهزة ومكونات كمبيوتر أصلية بضمان ودعم فني.</p></div>
+        <div class="footer-col"><h4>الأقسام</h4><a href="/category.html?type=laptop">لابتوبات</a><a href="/category.html?type=gpu">كروت شاشة</a><a href="/category.html?type=cpu">معالجات</a><a href="/category.html?type=motherboard">لوحات أم</a></div>
+        <div class="footer-col"><h4>حسابك</h4><a href="/account.html">طلباتي</a><a href="/cart.html">السلة</a><a href="/login.html">تسجيل الدخول</a></div>
+        <div class="footer-col"><h4>تواصل معنا</h4><p>01034898787</p><p><a href="mailto:support@nourtecheg.com">support@nourtecheg.com</a></p></div>
       </div>
-      <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.</p>
+      <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. جميع الحقوق محفوظة.</p>
     </footer>
 
     <script src="/auth.js" defer></script>
@@ -113,5 +109,6 @@
     <script src="/category.js" defer></script>
     <script src="/footer.js" defer></script>
     <script src="/nav.js" defer></script>
+    <script src="/storefront-enhance.js" defer></script>
   </body>
 </html>
