@@ -1,295 +1,343 @@
 const API_BASE = "/api";
+
 const state = {
   products: [],
-  allProducts: [],
   companies: [],
 };
-let inventoryStatusEl = null;
-let statusTimer = null;
-const CATEGORY_LABELS = {
-  laptop: "Laptops",
-  gpu: "GPUs",
-  cpu: "CPUs",
-  hdd: "HDDs",
-  storage: "Storage",
-  motherboard: "Motherboards",
-  ram: "Memory",
-  monitor: "Monitors",
-  printer: "Printers",
-  desktop: "Desktops",
-  power: "Power",
-  accessory: "Accessories",
+
+const CATEGORY_META = {
+  laptop: { label: "لابتوبات", icon: "💻" },
+  gpu: { label: "كروت شاشة", icon: "🎮" },
+  cpu: { label: "معالجات", icon: "🧠" },
+  motherboard: { label: "لوحات أم", icon: "🧩" },
+  ram: { label: "رامات", icon: "⚡" },
+  storage: { label: "وحدات تخزين", icon: "💾" },
+  hdd: { label: "هاردات", icon: "🗄️" },
+  monitor: { label: "شاشات", icon: "🖥️" },
+  printer: { label: "طابعات", icon: "🖨️" },
+  desktop: { label: "أجهزة مكتبية", icon: "🧰" },
+  power: { label: "مزودات طاقة", icon: "🔌" },
+  accessory: { label: "إكسسوارات", icon: "⌨️" },
 };
 
 const CATEGORY_ORDER = [
   "laptop",
   "gpu",
   "cpu",
-  "storage",
-  "hdd",
   "motherboard",
   "ram",
+  "storage",
+  "hdd",
   "monitor",
-  "printer",
   "desktop",
   "power",
   "accessory",
+  "printer",
 ];
 
-function formatCategoryLabel(type) {
-  const normalized = String(type || "").trim().toLowerCase();
-  if (!normalized) return "Products";
-  if (CATEGORY_LABELS[normalized]) return CATEGORY_LABELS[normalized];
-  if (normalized === "ram") return "RAM";
-  const title = normalized
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-  return title.endsWith("s") ? title : `${title}s`;
-}
-
-function normalizeCategory(type) {
-  const normalized = String(type || "").trim().toLowerCase();
-  return normalized || "other";
-}
+const moneyFormatter = new Intl.NumberFormat("ar-EG", {
+  style: "currency",
+  currency: "EGP",
+  maximumFractionDigits: 0,
+});
 
 function escapeHtml(value = "") {
   return String(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-async function fetchJSON(url, options = {}) {
-  const res = await fetch(url, { credentials: "include", ...options });
-  if (!res.ok) {
-    const text = await res.text();
-    let message = text;
-    try {
-      const data = JSON.parse(text);
-      if (data && data.error) message = data.error;
-    } catch (error) {
-      // ignore parse errors
-    }
-    const error = new Error(message || `Request failed with status ${res.status}`);
-    error.status = res.status;
-    throw error;
-  }
-  return res.json();
+function normalizeType(value = "") {
+  return String(value || "").trim().toLowerCase() || "other";
 }
 
-function updateCartCount() {
-  if (!window.Cart) return;
-  const badge = document.getElementById("cart-count");
-  if (!badge) return;
-  badge.textContent = window.Cart.count();
+function categoryMeta(type) {
+  const normalized = normalizeType(type);
+  if (CATEGORY_META[normalized]) return CATEGORY_META[normalized];
+  return {
+    label: normalized
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    icon: "🛍️",
+  };
 }
 
-function showInventoryStatus(message, type = "success") {
-  if (!inventoryStatusEl) return;
-  if (statusTimer) {
-    clearTimeout(statusTimer);
-  }
-  inventoryStatusEl.innerHTML = `<div class="toast ${type === "error" ? "error" : ""}">${message}</div>`;
-  statusTimer = window.setTimeout(() => {
-    inventoryStatusEl.innerHTML = "";
-  }, 3000);
+function formatPrice(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? moneyFormatter.format(amount) : "";
 }
 
-function populateCompanyFilter(companies = []) {
-  const select = document.getElementById("filter-company");
-  if (!select) return;
-  const current = select.value;
-  select.innerHTML = `<option value="">Any brand</option>`;
-  companies.forEach((company) => {
-    const option = document.createElement("option");
-    option.value = company.id;
-    option.textContent = company.name;
-    select.appendChild(option);
-  });
-  if (current && companies.find((company) => company.id === current)) {
-    select.value = current;
-  }
+function getOldPrice(product) {
+  return product.oldPrice ?? product.old_price ?? null;
 }
 
-function populateCategoryFilter(products = []) {
-  const select = document.getElementById("filter-category");
-  if (!select) return;
-  const current = select.value;
-  const knownOrder = Object.keys(CATEGORY_LABELS);
-  const dynamicTypes = Array.from(
-    new Set(
-      (products || [])
-        .map((product) => String(product.type || "").trim().toLowerCase())
-        .filter(Boolean)
-    )
-  );
-  const types = [
-    ...knownOrder.filter((type) => dynamicTypes.includes(type)),
-    ...dynamicTypes.filter((type) => !knownOrder.includes(type)).sort(),
-  ];
-  select.innerHTML = `<option value="">All categories</option>`;
-  types.forEach((type) => {
-    const option = document.createElement("option");
-    option.value = type;
-    option.textContent = formatCategoryLabel(type);
-    select.appendChild(option);
-  });
-  if (current && types.includes(current)) {
-    select.value = current;
-  }
+function getSaleLabel(product) {
+  return product.saleLabel ?? product.sale_label ?? "";
 }
 
-function setupHeaderSearch() {
-  const form = document.getElementById("header-search");
-  if (!form) return;
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const search = String(new FormData(form).get("search") || "").trim();
-    const url = new URL("/category.html", window.location.origin);
-    if (search) url.searchParams.set("search", search);
-    window.location.href = url.toString();
-  });
-}
-
-function groupProducts(products) {
-  return products.reduce((acc, product) => {
-    const type = normalizeCategory(product.type);
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(product);
-    return acc;
-  }, {});
-}
-
-function orderedCategories(grouped) {
-  return [
-    ...CATEGORY_ORDER.filter((type) => grouped[type]?.length),
-    ...Object.keys(grouped)
-      .filter((type) => !CATEGORY_ORDER.includes(type))
-      .sort((a, b) => formatCategoryLabel(a).localeCompare(formatCategoryLabel(b))),
-  ];
+function isFeatured(product) {
+  return Boolean(product.isFeatured ?? product.is_featured);
 }
 
 function productSummary(product) {
-  const title = String(product.title || "").trim().toLowerCase();
-  return [product.shortName, product.description, product.storage, product.ram]
+  const values = [
+    product.cpu,
+    product.gpu,
+    product.ram,
+    product.storage,
+    product.shortName,
+    product.description,
+  ]
     .map((value) => String(value || "").trim())
-    .find((value) => value && value.toLowerCase() !== title) || "";
+    .filter(Boolean);
+  return values.slice(0, 3).join(" • ");
+}
+
+async function fetchJSON(url, options = {}) {
+  const response = await fetch(url, { credentials: "include", ...options });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
+function updateCartCount() {
+  const badge = document.getElementById("cart-count");
+  if (!badge || !window.Cart) return;
+  badge.textContent = window.Cart.count();
+}
+
+function addToCart(product, button) {
+  if (!window.Cart) return;
+  window.Cart.add(product.id);
+  updateCartCount();
+  const original = button.textContent;
+  button.textContent = "✓";
+  button.disabled = true;
+  window.setTimeout(() => {
+    button.textContent = original;
+    button.disabled = false;
+  }, 900);
 }
 
 function createProductCard(product) {
   const card = document.createElement("article");
-  card.className = "product-card rail-card";
-  const typeLabel = formatCategoryLabel(product.type);
-  const brandLabel = product.company?.name || "Unassigned";
-  const image =
-    product.images?.[0] || `https://placehold.co/600x400?text=${encodeURIComponent(typeLabel)}`;
+  card.className = "product-card";
+  card.tabIndex = 0;
+
+  const meta = categoryMeta(product.type);
+  const brand = product.company?.name || "Nour Tech";
+  const image = product.images?.[0] || "/data/nourtechsmall.png";
+  const price = formatPrice(product.price);
+  const oldPriceValue = getOldPrice(product);
+  const oldPrice = formatPrice(oldPriceValue);
+  const saleLabel = getSaleLabel(product);
+  const featured = isFeatured(product);
+  const hasStockField = Object.prototype.hasOwnProperty.call(product, "stock");
+  const stock = Number(product.stock);
+  const inStock = !hasStockField || !Number.isFinite(stock) || stock > 0;
   const summary = productSummary(product);
+
   card.innerHTML = `
+    <div class="product-flags">
+      ${saleLabel ? `<span class="product-flag sale">${escapeHtml(saleLabel)}</span>` : ""}
+      ${featured ? `<span class="product-flag featured">مميز</span>` : ""}
+    </div>
     <div class="product-media">
-      <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
+      <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title || "منتج")}" />
     </div>
     <div class="product-body">
-        <span class="badge">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
-        <h3 class="product-title">${escapeHtml(product.title)}</h3>
-        ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <span class="product-brand">${escapeHtml(brand)} • ${escapeHtml(meta.label)}</span>
+      <h3 class="product-title">${escapeHtml(product.title || "منتج بدون اسم")}</h3>
+      ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <span class="product-stock ${inStock ? "" : "out"}">${inStock ? "● متوفر للطلب" : "● غير متوفر حاليًا"}</span>
+      <div class="product-price-row">
+        <div class="product-price">
+          ${price ? `<strong>${price}</strong>${oldPrice && Number(oldPriceValue) > Number(product.price) ? `<del>${oldPrice}</del>` : ""}` : `<span class="product-contact-price">تواصل لمعرفة السعر</span>`}
+        </div>
+        <button class="product-cart-btn" type="button" aria-label="إضافة ${escapeHtml(product.title || "المنتج")} للسلة" ${inStock ? "" : "disabled"}>🛒</button>
+      </div>
     </div>
   `;
+
   const detailUrl = `/laptop.html?id=${encodeURIComponent(product.id)}`;
-  card.dataset.href = detailUrl;
-  card.addEventListener("click", (event) => {
+  const openProduct = () => {
     window.location.href = detailUrl;
+  };
+
+  card.addEventListener("click", openProduct);
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openProduct();
+    }
   });
+
+  const cartButton = card.querySelector(".product-cart-btn");
+  cartButton?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    addToCart(product, cartButton);
+  });
+
   return card;
 }
 
-function setYear() {
-  const yearEl = document.getElementById("year");
-  if (yearEl) {
-    yearEl.textContent = new Date().getFullYear();
-  }
+function groupedProducts(products) {
+  return products.reduce((groups, product) => {
+    const type = normalizeType(product.type);
+    if (!groups[type]) groups[type] = [];
+    groups[type].push(product);
+    return groups;
+  }, {});
 }
 
-async function loadInventory(params = {}) {
-  const url = new URL(`${API_BASE}/products`, window.location.origin);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== "" && value != null) {
-      url.searchParams.set(key, value);
-    }
+function orderedTypes(groups) {
+  return [
+    ...CATEGORY_ORDER.filter((type) => groups[type]?.length),
+    ...Object.keys(groups).filter((type) => !CATEGORY_ORDER.includes(type)).sort(),
+  ];
+}
+
+function renderCategories(products) {
+  const grid = document.getElementById("category-grid");
+  if (!grid) return;
+
+  const groups = groupedProducts(products);
+  const types = orderedTypes(groups);
+  const visibleTypes = types.length ? types : CATEGORY_ORDER.slice(0, 8);
+  grid.innerHTML = "";
+
+  visibleTypes.slice(0, 12).forEach((type) => {
+    const meta = categoryMeta(type);
+    const count = groups[type]?.length || 0;
+    const link = document.createElement("a");
+    link.className = "category-tile";
+    link.href = `/category.html?type=${encodeURIComponent(type)}`;
+    link.innerHTML = `
+      <span class="category-icon">${meta.icon}</span>
+      <strong>${escapeHtml(meta.label)}</strong>
+      <small>${count ? `${count} منتج` : "استكشف القسم"}</small>
+    `;
+    grid.appendChild(link);
   });
-  return fetchJSON(url.toString());
 }
 
-async function loadCompanies() {
-  return fetchJSON(`${API_BASE}/companies`);
+function renderFeatured(products) {
+  const grid = document.getElementById("featured-products");
+  if (!grid) return;
+
+  const featured = products.filter(isFeatured);
+  const list = (featured.length ? featured : products).slice(0, 8);
+  grid.innerHTML = "";
+  list.forEach((product) => grid.appendChild(createProductCard(product)));
 }
 
-function toggleEmptyState(hasResults) {
-  const empty = document.getElementById("empty");
-  if (!empty) return;
-  empty.hidden = hasResults;
-}
-
-function renderProducts(products) {
-  state.products = products;
+function renderCatalog(products) {
   const results = document.getElementById("results");
+  const empty = document.getElementById("empty");
+  if (!results) return;
+
   results.innerHTML = "";
   if (!products.length) {
-    toggleEmptyState(false);
+    if (empty) empty.hidden = false;
     return;
   }
-  toggleEmptyState(true);
-  const fragment = document.createDocumentFragment();
-  const grouped = groupProducts(products);
-  const categoryOrder = orderedCategories(grouped);
-  categoryOrder.forEach((type) => {
-    const items = grouped[type] || [];
-    if (!items.length) return;
+  if (empty) empty.hidden = true;
+
+  const groups = groupedProducts(products);
+  orderedTypes(groups).forEach((type) => {
+    const items = groups[type];
+    const meta = categoryMeta(type);
     const section = document.createElement("section");
-    section.className = "catalog-section product-rail-section";
+    section.className = "catalog-section";
     section.innerHTML = `
       <div class="catalog-heading">
-        <h2>${formatCategoryLabel(type)}</h2>
+        <h2>${escapeHtml(meta.label)}</h2>
         <div class="rail-heading-actions">
-          <button class="rail-button" type="button" data-rail-prev aria-label="Scroll ${escapeHtml(formatCategoryLabel(type))} left">‹</button>
-          <button class="rail-button" type="button" data-rail-next aria-label="Scroll ${escapeHtml(formatCategoryLabel(type))} right">›</button>
-          <a href="/category.html?type=${encodeURIComponent(type)}">View all ${items.length}</a>
+          <button class="rail-button" type="button" data-prev aria-label="السابق">‹</button>
+          <button class="rail-button" type="button" data-next aria-label="التالي">›</button>
+          <a class="store-section-link" href="/category.html?type=${encodeURIComponent(type)}">عرض الكل</a>
         </div>
       </div>
       <div class="product-rail"></div>
     `;
+
     const rail = section.querySelector(".product-rail");
     items.slice(0, 16).forEach((product) => rail.appendChild(createProductCard(product)));
-    const prev = section.querySelector("[data-rail-prev]");
-    const next = section.querySelector("[data-rail-next]");
-    const scrollRail = (direction) => {
-      rail.scrollBy({
-        left: direction * Math.max(rail.clientWidth * 0.85, 260),
-        behavior: "smooth",
-      });
-    };
-    if (prev) prev.addEventListener("click", () => scrollRail(-1));
-    if (next) next.addEventListener("click", () => scrollRail(1));
-    fragment.appendChild(section);
+    section.querySelector("[data-prev]")?.addEventListener("click", () => {
+      rail.scrollBy({ left: Math.max(rail.clientWidth * 0.85, 280), behavior: "smooth" });
+    });
+    section.querySelector("[data-next]")?.addEventListener("click", () => {
+      rail.scrollBy({ left: -Math.max(rail.clientWidth * 0.85, 280), behavior: "smooth" });
+    });
+    results.appendChild(section);
   });
-  results.appendChild(fragment);
+}
+
+function updateHero(products) {
+  const chosen = products.find(isFeatured) || products[0];
+  if (!chosen) return;
+
+  const title = document.getElementById("hero-title");
+  const description = document.getElementById("hero-description");
+  const image = document.getElementById("hero-product-image");
+  const placeholder = document.getElementById("hero-placeholder");
+
+  if (title) title.textContent = chosen.title || "قوة تستحقها في كل لعبة وكل مشروع";
+  if (description) {
+    description.textContent = productSummary(chosen) || chosen.description || "اكتشف أحدث منتجات نور تكنولوجي بضمان ودعم فني.";
+  }
+  if (image && chosen.images?.[0]) {
+    image.src = chosen.images[0];
+    image.alt = chosen.title || "منتج مميز";
+    image.classList.add("store-hero-product");
+    if (placeholder) placeholder.style.background = "rgba(255,255,255,.08)";
+  }
+}
+
+function setupSearch() {
+  const form = document.getElementById("header-search");
+  if (!form) return;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const query = String(new FormData(form).get("search") || "").trim();
+    const url = new URL("/category.html", window.location.origin);
+    if (query) url.searchParams.set("search", query);
+    window.location.href = `${url.pathname}${url.search}`;
+  });
+}
+
+function showStatus(message, isError = false) {
+  const container = document.getElementById("inventory-status");
+  if (!container) return;
+  container.innerHTML = `<div class="toast ${isError ? "error" : ""}">${escapeHtml(message)}</div>`;
 }
 
 async function init() {
-  setYear();
-  inventoryStatusEl = document.getElementById("inventory-status");
   updateCartCount();
-  setupHeaderSearch();
+  setupSearch();
+
   try {
-    const inventory = await loadInventory();
-    state.allProducts = inventory || [];
-    renderProducts(inventory);
+    const [products, companies] = await Promise.all([
+      fetchJSON(`${API_BASE}/products`),
+      fetchJSON(`${API_BASE}/companies`).catch(() => []),
+    ]);
+    state.products = Array.isArray(products) ? products : [];
+    state.companies = Array.isArray(companies) ? companies : [];
+    renderCategories(state.products);
+    renderFeatured(state.products);
+    renderCatalog(state.products);
+    updateHero(state.products);
   } catch (error) {
     console.error(error);
-    showInventoryStatus("Could not load inventory right now.", "error");
-    const results = document.getElementById("results");
-    results.innerHTML = `<div class="toast error">Inventory isn't loading yet. Please try again shortly.</div>`;
-    toggleEmptyState(true);
+    renderCategories([]);
+    showStatus("تعذر تحميل المنتجات الآن. جرّب تحديث الصفحة بعد قليل.", true);
+    const empty = document.getElementById("empty");
+    if (empty) empty.hidden = false;
   }
 }
 
