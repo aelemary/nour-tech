@@ -1,118 +1,193 @@
 <!doctype html>
 <html lang="en">
   <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-916CLWK6N4"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-916CLWK6N4');
-  </script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-916CLWK6N4"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-916CLWK6N4');
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nour Tech</title>
+    <meta name="description" content="Shop gaming laptops, PC components, monitors and accessories from Nour Tech Egypt." />
+    <title>Nour Tech | Gaming Laptops & PC Hardware</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/storefront.css" />
     <link rel="icon" type="image/png" href="/data/nourtechsmall.png" />
   </head>
-  <body class="page-main">
-    <header>
-      <a class="logo" href="/" aria-label="Nour Tech home">
-        <img src="/data/nourtechlogo.png" alt="Nour Tech logo" class="logo-mark" />
-      </a>
-      <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">Menu</button>
-      <nav id="site-nav">
-        <a href="/index.html">Inventory</a>
-        <a href="/contact.html">Contact</a>
-<a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
-        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
-        <a href="/admin.html" data-requires-role="admin">Admin</a>
-        <span id="nav-user" class="nav-user" hidden></span>
-        <a href="/signup.html" id="nav-signup">Sign Up</a>
-        <a href="/login.html" id="nav-auth">Login</a>
+  <body class="store-page store-home">
+    <div class="store-announcement">
+      <div class="store-container store-announcement-inner">
+        <span>Premium laptops and PC hardware with trusted warranty</span>
+        <span>Call us: <strong data-sales-hotline>01034898787</strong></span>
+      </div>
+    </div>
+
+    <header class="store-header">
+      <div class="store-container store-header-main">
+        <button class="store-menu-toggle" type="button" data-store-menu-toggle aria-expanded="false" aria-label="Open menu">☰</button>
+        <a class="store-logo" href="/" aria-label="Nour Tech home">
+          <img src="/data/nourtechlogo.png" alt="Nour Tech" />
+        </a>
+        <form class="store-search" data-store-search role="search">
+          <input type="search" name="search" placeholder="Type it. Find it. Own it." aria-label="Search products" />
+          <button type="submit" aria-label="Search">⌕</button>
+        </form>
+        <div class="store-header-actions">
+          <a href="/account.html" id="nav-account" data-requires-auth="true" class="store-icon-link"><span>Account</span></a>
+          <a href="/signup.html" id="nav-signup" class="store-icon-link"><span>Sign up</span></a>
+          <a href="/login.html" id="nav-auth" class="store-icon-link"><span>Login</span></a>
+          <span id="nav-user" class="nav-user" hidden></span>
+          <a href="/admin.html" data-requires-role="admin" class="store-icon-link"><span>Admin</span></a>
+          <a href="/cart.html" class="store-cart-link" aria-label="Cart">
+            <span class="store-cart-icon">🛒</span>
+            <span>Cart</span>
+            <b id="cart-count">0</b>
+          </a>
+        </div>
+      </div>
+
+      <nav class="store-nav" data-store-menu>
+        <div class="store-container store-nav-inner">
+          <a class="is-active" href="/">Home</a>
+          <a href="/category.html">Shop</a>
+          <a href="/category.html?type=laptop">Laptops</a>
+          <a href="/category.html?type=gpu">Graphics Cards</a>
+          <a href="/category.html?type=monitor">Monitors</a>
+          <a href="/category.html?type=accessory">Accessories</a>
+          <a href="/contact.html">Contact</a>
+        </div>
       </nav>
-      <form id="header-search" class="header-search" role="search">
-        <input type="search" name="search" placeholder="Search catalog" aria-label="Search catalog" />
-        <button type="submit">Search</button>
-      </form>
     </header>
 
     <main>
-      <section class="panel" id="inventory">
-        <div class="inventory-header">
-          <div>
-            <h1>Product Catalog</h1>
+      <section class="store-hero">
+        <div class="store-container store-hero-grid">
+          <div class="store-hero-copy">
+            <span class="store-kicker">YOUR ULTIMATE TECH DESTINATION</span>
+            <h1>Performance that matches your ambition.</h1>
+            <p>Gaming laptops, workstations and PC components selected for serious performance, backed by real support.</p>
+            <div class="store-hero-actions">
+              <a class="store-btn store-btn-primary store-btn-large" href="/category.html">Shop all products</a>
+              <a class="store-btn store-btn-outline store-btn-large" href="/category.html?type=laptop">Explore laptops</a>
+            </div>
+            <div class="store-hero-points">
+              <span>✓ Trusted warranty</span>
+              <span>✓ Fast delivery</span>
+              <span>✓ Expert support</span>
+            </div>
+          </div>
+          <div class="store-hero-visual">
+            <div class="store-hero-glow"></div>
+            <img id="hero-product-image" src="https://placehold.co/900x680/f1f5f9/123b66?text=NOUR+TECH" alt="Featured product" />
+            <div class="store-hero-product" id="hero-product-card" hidden>
+              <span>Featured pick</span>
+              <strong id="hero-product-title"></strong>
+              <b id="hero-product-price"></b>
+            </div>
           </div>
         </div>
-        <div id="inventory-status" class="order-status"></div>
-        <div id="results" class="catalog-stack"></div>
-        <div id="empty" class="empty-state" hidden>
-          Nothing matched that search. Try a different keyword or come back soon for fresh stock.
+      </section>
+
+      <section class="store-section store-categories-section">
+        <div class="store-container">
+          <div class="store-section-heading">
+            <div>
+              <span class="store-section-kicker">SHOP BY CATEGORY</span>
+              <h2>Find your next upgrade</h2>
+            </div>
+            <a href="/category.html">View all products →</a>
+          </div>
+          <div id="category-tiles" class="store-category-grid"></div>
+        </div>
+      </section>
+
+      <section class="store-section store-featured-section">
+        <div class="store-container">
+          <div class="store-section-heading">
+            <div>
+              <span class="store-section-kicker">HAND-PICKED</span>
+              <h2>Featured products</h2>
+            </div>
+            <a href="/category.html">View all →</a>
+          </div>
+          <div id="featured-products" class="store-product-grid"></div>
+          <div id="featured-empty" class="store-empty" hidden>No products are published yet.</div>
+        </div>
+      </section>
+
+      <section class="store-promo-band">
+        <div class="store-container store-promo-grid">
+          <div>
+            <span class="store-section-kicker">NEED HELP CHOOSING?</span>
+            <h2>Tell us what you do. We will match the right device.</h2>
+            <p>Gaming, engineering, rendering, editing, AI workloads or business use — our team can narrow down the best option.</p>
+          </div>
+          <a class="store-btn store-btn-white store-btn-large" data-whatsapp-link href="https://wa.me/201034898787" target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a>
+        </div>
+      </section>
+
+      <section class="store-section">
+        <div class="store-container">
+          <div class="store-section-heading">
+            <div>
+              <span class="store-section-kicker">JUST ADDED</span>
+              <h2>Latest arrivals</h2>
+            </div>
+            <a href="/category.html?sort=newest">See everything →</a>
+          </div>
+          <div id="latest-products" class="store-product-grid"></div>
+        </div>
+      </section>
+
+      <section class="store-service-strip">
+        <div class="store-container store-service-grid">
+          <article><span>🚚</span><div><h3>Fast delivery</h3><p>Delivery timing is confirmed when your order is placed.</p></div></article>
+          <article><span>🛡️</span><div><h3>Reliable warranty</h3><p>Clear warranty details are shown on every product page.</p></div></article>
+          <article><span>💬</span><div><h3>Expert support</h3><p>Talk to someone who understands the hardware before you buy.</p></div></article>
         </div>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div class="footer-main">
-        <a href="/" class="footer-logo-link" aria-label="Nour Tech home">
-          <img src="/data/nourtechlogo.png" alt="Nour Tech" class="footer-logo" />
-        </a>
-        <div class="footer-socials">
-          <a
-            href="https://www.facebook.com/share/1BJq8qdpZs/"
-            class="footer-social"
-            aria-label="Facebook"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <img src="/data/facebook.png" alt="" class="footer-social-icon footer-social-image" />
-          </a>
-          <a
-            href="https://x.com/"
-            class="footer-social"
-            aria-label="Twitter"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <svg viewBox="0 0 24 24" class="footer-social-icon" aria-hidden="true">
-              <path d="M18.9 2H22l-6.8 7.8L23 22h-6.2l-4.8-6.3L6.6 22H3.5l7.3-8.3L1 2h6.3l4.3 5.7L18.9 2z" />
-            </svg>
-          </a>
-          <a
-            href="#"
-            class="footer-social"
-            id="footer-whatsapp-link"
-            aria-label="WhatsApp"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <svg viewBox="0 0 24 24" class="footer-social-icon" aria-hidden="true">
-              <path d="M20 11.2C20 6.7 16.4 3 12 3S4 6.7 4 11.2c0 1.8.6 3.5 1.6 4.8L4.5 21l5-1.3c1.1.6 2.4.9 3.6.9 4.4 0 7.9-3.7 7.9-9.4zm-8 7.4c-1.1 0-2.2-.3-3.2-.9l-.4-.2-3 .8.8-3-.3-.4c-1-1.3-1.5-2.7-1.5-4.3 0-3.4 2.7-6.2 6.1-6.2s6.1 2.8 6.1 6.2-2.7 6.2-6.1 6.2zm3.4-4.6c-.2-.1-1.3-.6-1.5-.7s-.3-.1-.4.1-.5.7-.6.8-.2.2-.4.1c-.2-.1-.9-.3-1.7-1-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.3c.1-.1.1-.2.2-.3.1-.1 0-.2 0-.3 0-.1-.4-1-.6-1.4-.2-.4-.3-.3-.4-.3h-.3c-.1 0-.3 0-.4.2-.1.2-.6.6-.6 1.5s.6 1.7.7 1.8c.1.1 1.2 2 2.9 2.7 1.8.8 1.8.5 2.2.5.4-.1 1.3-.5 1.5-.9.2-.4.2-.8.1-.9-.1-.1-.2-.1-.4-.2z" />
-            </svg>
-          </a>
+    <a class="store-floating-whatsapp" data-whatsapp-link href="https://wa.me/201034898787" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">WA</a>
+
+    <footer class="store-footer">
+      <div class="store-container store-footer-grid">
+        <div>
+          <img src="/data/nourtechlogo.png" alt="Nour Tech" class="store-footer-logo" />
+          <p>Premium laptops, gaming hardware and PC components with trusted support across Egypt.</p>
+        </div>
+        <div>
+          <h3>Shop</h3>
+          <a href="/category.html?type=laptop">Laptops</a>
+          <a href="/category.html?type=gpu">Graphics Cards</a>
+          <a href="/category.html?type=monitor">Monitors</a>
+          <a href="/category.html?type=accessory">Accessories</a>
+        </div>
+        <div>
+          <h3>Customer care</h3>
+          <a href="/contact.html">Contact us</a>
+          <a href="/account.html">My orders</a>
+          <a href="/cart.html">Shopping cart</a>
+        </div>
+        <div>
+          <h3>Contact</h3>
+          <a data-whatsapp-link href="https://wa.me/201034898787" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          <p data-sales-hotline>01034898787</p>
+          <a href="https://www.facebook.com/share/1BJq8qdpZs/" target="_blank" rel="noopener noreferrer">Facebook</a>
         </div>
       </div>
-      <div class="footer-contact">
-        <p><strong>Sales Hotline:</strong> <span data-footer-contact="salesHotline">—</span></p>
-        <p>
-          <strong>WhatsApp:</strong>
-          <a href="#" id="footer-whatsapp-text-link" target="_blank" rel="noopener noreferrer">
-            <span data-footer-contact="whatsapp">—</span>
-          </a>
-        </p>
-        <p>
-          <strong>Email:</strong>
-          <a href="mailto:support@nourtech.example" data-footer-contact-email>support@nourtech.example</a>
-        </p>
-        <p><strong>Address:</strong> <span data-footer-contact="address">—</span></p>
+      <div class="store-container store-footer-bottom">
+        <span>Nour Tech © <span data-current-year></span></span>
+        <span>Designed for a faster, clearer shopping experience.</span>
       </div>
-      <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.</p>
     </footer>
 
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
+    <script src="/storefront.js" defer></script>
     <script src="/main.js" defer></script>
-      <script src="/footer.js" defer></script>
-      <script src="/nav.js" defer></script>
   </body>
 </html>
