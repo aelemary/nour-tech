@@ -1,117 +1,85 @@
 <!doctype html>
 <html lang="en">
   <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-916CLWK6N4"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-916CLWK6N4');
-  </script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-916CLWK6N4"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-916CLWK6N4');
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nour Tech | Catalog Search</title>
+    <title>Shop | Nour Tech</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/storefront.css" />
     <link rel="icon" type="image/png" href="/data/nourtechsmall.png" />
   </head>
-  <body class="page-main">
-    <header>
-      <a class="logo" href="/" aria-label="Nour Tech home">
-        <img src="/data/nourtechlogo.png" alt="Nour Tech logo" class="logo-mark" />
-      </a>
-      <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">Menu</button>
-      <nav id="site-nav">
-        <a href="/index.html">Inventory</a>
-        <a href="/contact.html">Contact</a>
-        <a href="/account.html" id="nav-account" data-requires-auth="true">My Orders</a>
-        <a href="/cart.html" class="cart-link">Cart <span id="cart-count" class="cart-count">0</span></a>
-        <a href="/admin.html" data-requires-role="admin">Admin</a>
-        <span id="nav-user" class="nav-user" hidden></span>
-        <a href="/signup.html" id="nav-signup">Sign Up</a>
-        <a href="/login.html" id="nav-auth">Login</a>
-      </nav>
-      <form id="header-search" class="header-search" role="search">
-        <input type="search" name="search" placeholder="Search catalog" aria-label="Search catalog" />
-        <button type="submit">Search</button>
-      </form>
+  <body class="store-page store-shop-page">
+    <div class="store-announcement"><div class="store-container store-announcement-inner"><span>Premium tech with trusted warranty</span><span>Call us: <strong data-sales-hotline>01034898787</strong></span></div></div>
+    <header class="store-header">
+      <div class="store-container store-header-main">
+        <button class="store-menu-toggle" type="button" data-store-menu-toggle aria-expanded="false" aria-label="Open menu">☰</button>
+        <a class="store-logo" href="/"><img src="/data/nourtechlogo.png" alt="Nour Tech" /></a>
+        <form class="store-search" data-store-search role="search"><input type="search" name="search" placeholder="Search products" aria-label="Search products" /><button type="submit">⌕</button></form>
+        <div class="store-header-actions">
+          <a href="/account.html" id="nav-account" data-requires-auth="true" class="store-icon-link">Account</a>
+          <a href="/signup.html" id="nav-signup" class="store-icon-link">Sign up</a>
+          <a href="/login.html" id="nav-auth" class="store-icon-link">Login</a>
+          <span id="nav-user" class="nav-user" hidden></span>
+          <a href="/admin.html" data-requires-role="admin" class="store-icon-link">Admin</a>
+          <a href="/cart.html" class="store-cart-link"><span>🛒 Cart</span><b id="cart-count">0</b></a>
+        </div>
+      </div>
+      <nav class="store-nav" data-store-menu><div class="store-container store-nav-inner"><a href="/">Home</a><a class="is-active" href="/category.html">Shop</a><a href="/category.html?type=laptop">Laptops</a><a href="/category.html?type=gpu">Graphics Cards</a><a href="/category.html?type=monitor">Monitors</a><a href="/category.html?type=accessory">Accessories</a><a href="/contact.html">Contact</a></div></nav>
     </header>
 
-    <main>
-      <section class="panel category-page-head">
-        <a class="back-link" href="/index.html">Back to catalog</a>
-        <h1 id="category-title">Catalog Search</h1>
-        <p class="inventory-subtitle" id="category-subtitle">
-          Refine products by keyword, brand, category, and visible specification text.
-        </p>
-      </section>
-
-      <section class="panel category-filter-panel">
-        <h2>Filters</h2>
-        <form id="category-filter-form" class="filters-form">
-          <label>
-            Keywords
-            <input type="search" id="filter-search" name="search" placeholder="Title, brand, or specs" />
-          </label>
-          <label>
-            Category
-            <select id="filter-category" name="category">
-              <option value="">All categories</option>
-            </select>
-          </label>
-          <label>
-            Brand
-            <select id="filter-company" name="companyId">
-              <option value="">Any brand</option>
-            </select>
-          </label>
-          <label>
-            CPU
-            <input type="text" name="cpu" placeholder="Intel, Ryzen, Ultra..." />
-          </label>
-          <label>
-            GPU
-            <input type="text" name="gpu" placeholder="RTX, Radeon, Intel..." />
-          </label>
-          <label>
-            RAM / Memory
-            <input type="text" name="ram" placeholder="16GB, DDR5..." />
-          </label>
-          <label>
-            Storage / Capacity
-            <input type="text" name="storage" placeholder="1TB, NVMe, SATA..." />
-          </label>
-          <div class="filter-actions">
-            <button type="submit" class="btn btn-primary">Apply Filters</button>
-            <button type="button" class="btn btn-outline" id="filter-reset">Reset</button>
-          </div>
-        </form>
-        <div id="category-status" class="order-status"></div>
-      </section>
-
-      <section class="panel category-results-panel">
-        <div class="catalog-heading">
-          <h2 id="result-count">Products</h2>
-          <span id="result-context"></span>
+    <main class="store-shop-main">
+      <section class="store-shop-hero">
+        <div class="store-container">
+          <span class="store-section-kicker">NOUR TECH STORE</span>
+          <h1 id="shop-title">Shop all products</h1>
+          <p id="shop-subtitle">Explore laptops, components, monitors and accessories.</p>
         </div>
-        <div id="category-results" class="catalog-grid category-results-grid"></div>
-        <div id="category-empty" class="empty-state" hidden>Nothing matched those filters.</div>
       </section>
+
+      <div class="store-container store-shop-layout">
+        <aside class="store-filter-panel" id="filter-panel">
+          <div class="store-filter-head"><h2>Filters</h2><button id="filter-close" type="button" aria-label="Close filters">×</button></div>
+          <form id="shop-filters">
+            <label>Search<input type="search" name="search" id="filter-search" placeholder="Product, model or specs" /></label>
+            <label>Category<select name="category" id="filter-category"><option value="">All categories</option></select></label>
+            <label>Brand<select name="companyId" id="filter-company"><option value="">All brands</option></select></label>
+            <div class="store-filter-two"><label>Min price<input type="number" name="minPrice" min="0" placeholder="0" /></label><label>Max price<input type="number" name="maxPrice" min="0" placeholder="250000" /></label></div>
+            <label>Processor<input type="text" name="cpu" placeholder="Intel, Ryzen, Ultra..." /></label>
+            <label>Graphics<input type="text" name="gpu" placeholder="RTX, Radeon..." /></label>
+            <label>Memory<input type="text" name="ram" placeholder="16GB, DDR5..." /></label>
+            <label>Storage<input type="text" name="storage" placeholder="1TB, NVMe..." /></label>
+            <label class="store-check"><input type="checkbox" name="inStock" value="1" /><span>In-stock products only</span></label>
+            <button class="store-btn store-btn-primary" type="submit">Apply filters</button>
+            <button class="store-btn store-btn-light" type="button" id="filter-reset">Reset</button>
+          </form>
+        </aside>
+
+        <section class="store-shop-results">
+          <div class="store-shop-toolbar">
+            <button class="store-filter-toggle" id="filter-toggle" type="button">☰ Filters</button>
+            <p><strong id="result-count">0</strong> products</p>
+            <label>Sort<select id="sort-products"><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="name">Name</option></select></label>
+          </div>
+          <div id="category-results" class="store-product-grid store-shop-grid"></div>
+          <div id="category-empty" class="store-empty" hidden>No products match those filters.</div>
+        </section>
+      </div>
     </main>
 
-    <footer class="site-footer">
-      <div class="footer-main">
-        <a href="/" class="footer-logo-link" aria-label="Nour Tech home">
-          <img src="/data/nourtechlogo.png" alt="Nour Tech" class="footer-logo" />
-        </a>
-      </div>
-      <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.</p>
-    </footer>
+    <a class="store-floating-whatsapp" data-whatsapp-link href="https://wa.me/201034898787" target="_blank" rel="noopener noreferrer">WA</a>
+    <footer class="store-footer"><div class="store-container store-footer-grid"><div><img src="/data/nourtechlogo.png" alt="Nour Tech" class="store-footer-logo" /><p>Premium laptops and PC hardware with trusted support.</p></div><div><h3>Shop</h3><a href="/category.html?type=laptop">Laptops</a><a href="/category.html?type=gpu">Graphics Cards</a><a href="/category.html?type=monitor">Monitors</a></div><div><h3>Customer care</h3><a href="/contact.html">Contact</a><a href="/account.html">My orders</a><a href="/cart.html">Cart</a></div><div><h3>Contact</h3><a data-whatsapp-link href="https://wa.me/201034898787">WhatsApp</a><p data-sales-hotline>01034898787</p></div></div><div class="store-container store-footer-bottom"><span>Nour Tech © <span data-current-year></span></span></div></footer>
 
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
+    <script src="/storefront.js" defer></script>
     <script src="/category.js" defer></script>
-    <script src="/footer.js" defer></script>
-    <script src="/nav.js" defer></script>
   </body>
 </html>

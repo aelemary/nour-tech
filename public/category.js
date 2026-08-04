@@ -1,284 +1,163 @@
-const API_BASE = "/api";
+const shopState = { products: [], companies: [] };
 
-const state = {
-  products: [],
-  companies: [],
-};
-
-const CATEGORY_LABELS = {
-  laptop: "Laptops",
-  gpu: "GPUs",
-  cpu: "CPUs",
-  hdd: "HDDs",
-  storage: "Storage",
-  motherboard: "Motherboards",
-  ram: "Memory",
-  monitor: "Monitors",
-  printer: "Printers",
-  desktop: "Desktops",
-  power: "Power",
-  accessory: "Accessories",
-};
-
-function escapeHtml(value = "") {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function formatCategoryLabel(type) {
-  const normalized = String(type || "").trim().toLowerCase();
-  if (!normalized) return "Products";
-  if (CATEGORY_LABELS[normalized]) return CATEGORY_LABELS[normalized];
-  const title = normalized
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-  return title.endsWith("s") ? title : `${title}s`;
-}
-
-async function fetchJSON(url, options = {}) {
-  const res = await fetch(url, { credentials: "include", ...options });
-  if (!res.ok) {
-    const text = await res.text();
-    let message = text;
-    try {
-      const data = JSON.parse(text);
-      if (data && data.error) message = data.error;
-    } catch (error) {
-      // ignore parse errors
-    }
-    const err = new Error(message || `Request failed with status ${res.status}`);
-    err.status = res.status;
-    throw err;
-  }
-  return res.json();
-}
-
-function setYear() {
-  const yearEl = document.getElementById("year");
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
-}
-
-function updateCartCount() {
-  if (!window.Cart) return;
-  const badge = document.getElementById("cart-count");
-  if (badge) badge.textContent = window.Cart.count();
-}
-
-function setupHeaderSearch() {
-  const form = document.getElementById("header-search");
-  if (!form) return;
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const search = String(new FormData(form).get("search") || "").trim();
-    const input = document.getElementById("filter-search");
-    if (input) input.value = search;
-    renderProducts();
-  });
-}
-
-function productText(product) {
+function textIndex(product) {
   return [
     product.title,
     product.shortName,
     product.description,
     product.company?.name,
     product.type,
-    product.gpu,
     product.cpu,
+    product.gpu,
     product.ram,
     product.storage,
     product.display,
-    product.specsRaw ? JSON.stringify(product.specsRaw) : "",
+    JSON.stringify(product.specsRaw || {}),
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 }
 
-function includesText(value, search) {
-  if (!search) return true;
-  return String(value || "").toLowerCase().includes(search);
-}
-
-function includesFieldOrProductText(product, fieldValue, search) {
-  if (!search) return true;
-  return includesText(fieldValue, search) || productText(product).includes(search);
-}
-
-function productSummary(product) {
-  const title = String(product.title || "").trim().toLowerCase();
-  return [product.shortName, product.description, product.storage, product.ram]
-    .map((value) => String(value || "").trim())
-    .find((value) => value && value.toLowerCase() !== title) || "";
-}
-
 function readFilters() {
-  const form = document.getElementById("category-filter-form");
-  const data = form ? Object.fromEntries(new FormData(form).entries()) : {};
-  return Object.fromEntries(
-    Object.entries(data).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
-  );
+  const form = document.getElementById("shop-filters");
+  const values = Object.fromEntries(new FormData(form).entries());
+  return {
+    search: String(values.search || "").trim().toLowerCase(),
+    category: String(values.category || "").trim().toLowerCase(),
+    companyId: String(values.companyId || "").trim(),
+    minPrice: Number(values.minPrice || 0),
+    maxPrice: Number(values.maxPrice || 0),
+    cpu: String(values.cpu || "").trim().toLowerCase(),
+    gpu: String(values.gpu || "").trim().toLowerCase(),
+    ram: String(values.ram || "").trim().toLowerCase(),
+    storage: String(values.storage || "").trim().toLowerCase(),
+    inStock: values.inStock === "1",
+  };
+}
+
+function includes(product, field, value) {
+  if (!value) return true;
+  return String(field || "").toLowerCase().includes(value) || textIndex(product).includes(value);
 }
 
 function filterProducts(products, filters) {
-  const search = (filters.search || "").toLowerCase();
   return products.filter((product) => {
-    const type = String(product.type || "").toLowerCase();
-    if (filters.category && type !== filters.category) return false;
-    if (filters.companyId && product.companyId !== filters.companyId) return false;
-    if (search && !productText(product).includes(search)) return false;
-    if (!includesFieldOrProductText(product, product.cpu || product.description, filters.cpu?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.gpu || product.description, filters.gpu?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.ram || product.description, filters.ram?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.storage || product.description, filters.storage?.toLowerCase())) return false;
+    const meta = Storefront.productMeta(product);
+    if (filters.search && !textIndex(product).includes(filters.search)) return false;
+    if (filters.category && String(product.type || "").toLowerCase() !== filters.category) return false;
+    if (filters.companyId && String(product.companyId || "") !== filters.companyId) return false;
+    if (filters.minPrice && meta.price < filters.minPrice) return false;
+    if (filters.maxPrice && meta.price > filters.maxPrice) return false;
+    if (filters.inStock && meta.stock === 0) return false;
+    if (!includes(product, product.cpu, filters.cpu)) return false;
+    if (!includes(product, product.gpu, filters.gpu)) return false;
+    if (!includes(product, product.ram, filters.ram)) return false;
+    if (!includes(product, product.storage, filters.storage)) return false;
     return true;
   });
 }
 
-function populateCategorySelect(products = []) {
-  const select = document.getElementById("filter-category");
-  if (!select) return;
-  const current = select.value;
-  const dynamicTypes = Array.from(
-    new Set(products.map((product) => String(product.type || "").trim().toLowerCase()).filter(Boolean))
-  );
-  const knownOrder = Object.keys(CATEGORY_LABELS);
-  const types = [
-    ...knownOrder.filter((type) => dynamicTypes.includes(type)),
-    ...dynamicTypes.filter((type) => !knownOrder.includes(type)).sort(),
-  ];
-  select.innerHTML = `<option value="">All categories</option>`;
-  types.forEach((type) => {
-    const option = document.createElement("option");
-    option.value = type;
-    option.textContent = formatCategoryLabel(type);
-    select.appendChild(option);
-  });
-  if (current && types.includes(current)) select.value = current;
-}
-
-function populateCompanySelect(companies = []) {
-  const select = document.getElementById("filter-company");
-  if (!select) return;
-  const current = select.value;
-  select.innerHTML = `<option value="">Any brand</option>`;
-  companies.forEach((company) => {
-    const option = document.createElement("option");
-    option.value = company.id;
-    option.textContent = company.name;
-    select.appendChild(option);
-  });
-  if (current && companies.some((company) => company.id === current)) select.value = current;
-}
-
-function createProductCard(product) {
-  const card = document.createElement("article");
-  card.className = "product-card";
-  const typeLabel = formatCategoryLabel(product.type);
-  const brandLabel = product.company?.name || "Unassigned";
-  const image =
-    product.images?.[0] || `https://placehold.co/600x400?text=${encodeURIComponent(typeLabel)}`;
-  const summary = productSummary(product);
-  card.innerHTML = `
-    <div class="product-media">
-      <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
-    </div>
-    <div class="product-body">
-        <span class="badge">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
-        <h3 class="product-title">${escapeHtml(product.title)}</h3>
-        ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
-    </div>
-  `;
-  card.addEventListener("click", () => {
-    window.location.href = `/laptop.html?id=${encodeURIComponent(product.id)}`;
-  });
-  return card;
-}
-
-function updateHead(filters, count) {
-  const title = document.getElementById("category-title");
-  const subtitle = document.getElementById("category-subtitle");
-  const resultCount = document.getElementById("result-count");
-  const resultContext = document.getElementById("result-context");
-  const categoryLabel = filters.category ? formatCategoryLabel(filters.category) : "";
-  if (title) title.textContent = categoryLabel || "Catalog Search";
-  if (subtitle) {
-    subtitle.textContent = categoryLabel
-      ? `Browse ${categoryLabel.toLowerCase()} with brand and specification filters.`
-      : "Refine products by keyword, brand, category, and visible specification text.";
+function sortProducts(products) {
+  const sort = document.getElementById("sort-products")?.value || "featured";
+  const items = products.slice();
+  if (sort === "price-asc") items.sort((a, b) => Storefront.productMeta(a).price - Storefront.productMeta(b).price);
+  if (sort === "price-desc") items.sort((a, b) => Storefront.productMeta(b).price - Storefront.productMeta(a).price);
+  if (sort === "name") items.sort((a, b) => a.title.localeCompare(b.title));
+  if (sort === "newest") items.reverse();
+  if (sort === "featured") {
+    items.sort((a, b) => Number(Storefront.productMeta(b).featured) - Number(Storefront.productMeta(a).featured));
   }
-  if (resultCount) resultCount.textContent = `${count} product${count === 1 ? "" : "s"}`;
-  if (resultContext) resultContext.textContent = filters.search ? `Search: "${filters.search}"` : "";
-  document.title = `Nour Tech | ${categoryLabel || "Catalog Search"}`;
+  return items;
 }
 
-function renderProducts() {
-  const results = document.getElementById("category-results");
-  const empty = document.getElementById("category-empty");
-  if (!results) return;
+function render() {
   const filters = readFilters();
-  const filtered = filterProducts(state.products, filters);
-  results.innerHTML = "";
-  if (!filtered.length) {
-    if (empty) empty.hidden = false;
-  } else {
-    if (empty) empty.hidden = true;
-    const fragment = document.createDocumentFragment();
-    filtered.forEach((product) => fragment.appendChild(createProductCard(product)));
-    results.appendChild(fragment);
-  }
-  updateHead(filters, filtered.length);
+  const filtered = sortProducts(filterProducts(shopState.products, filters));
+  const grid = document.getElementById("category-results");
+  const empty = document.getElementById("category-empty");
+  const count = document.getElementById("result-count");
+  if (count) count.textContent = filtered.length;
+  grid.innerHTML = "";
+  filtered.forEach((product) => grid.appendChild(Storefront.createProductCard(product)));
+  if (empty) empty.hidden = filtered.length > 0;
+  updateHeading(filters);
 }
 
-function applyInitialParams() {
+function updateHeading(filters) {
+  const title = document.getElementById("shop-title");
+  const subtitle = document.getElementById("shop-subtitle");
+  const label = filters.category ? Storefront.categoryLabel(filters.category) : "Shop all products";
+  if (title) title.textContent = filters.search ? `Results for “${filters.search}”` : label;
+  if (subtitle) subtitle.textContent = filters.category ? `Browse our ${label.toLowerCase()} collection.` : "Explore laptops, components, monitors and accessories.";
+  document.title = `${label} | Nour Tech`;
+}
+
+function populateFilters() {
+  const category = document.getElementById("filter-category");
+  const company = document.getElementById("filter-company");
+  const types = [...new Set(shopState.products.map((item) => String(item.type || "").toLowerCase()).filter(Boolean))];
+  types.sort((a, b) => Storefront.categoryLabel(a).localeCompare(Storefront.categoryLabel(b)));
+  types.forEach((type) => category.add(new Option(Storefront.categoryLabel(type), type)));
+  shopState.companies
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach((brand) => company.add(new Option(brand.name, brand.id)));
+}
+
+function applyUrlParams() {
   const params = new URLSearchParams(window.location.search);
-  const type = params.get("type") || "";
-  const search = params.get("search") || "";
-  const categoryInput = document.getElementById("filter-category");
-  const searchInput = document.getElementById("filter-search");
-  const headerInput = document.querySelector("#header-search input[name='search']");
-  if (categoryInput && type) categoryInput.value = type;
-  if (searchInput && search) searchInput.value = search;
-  if (headerInput && search) headerInput.value = search;
+  const mapping = { search: "filter-search", type: "filter-category", companyId: "filter-company" };
+  Object.entries(mapping).forEach(([param, id]) => {
+    const value = params.get(param);
+    const element = document.getElementById(id);
+    if (value && element) element.value = value;
+  });
+  const sort = params.get("sort");
+  if (sort && document.getElementById("sort-products")) document.getElementById("sort-products").value = sort;
 }
 
-async function init() {
-  setYear();
-  updateCartCount();
-  setupHeaderSearch();
-  const form = document.getElementById("category-filter-form");
-  const resetButton = document.getElementById("filter-reset");
+function setupMobileFilters() {
+  const panel = document.getElementById("filter-panel");
+  const open = document.getElementById("filter-toggle");
+  const close = document.getElementById("filter-close");
+  const setOpen = (value) => document.body.classList.toggle("store-filters-open", value);
+  open?.addEventListener("click", () => setOpen(true));
+  close?.addEventListener("click", () => setOpen(false));
+  panel?.addEventListener("click", (event) => {
+    if (event.target.closest("button[type='submit']")) setOpen(false);
+  });
+}
+
+async function initShop() {
+  Storefront.boot();
+  setupMobileFilters();
   try {
     const [products, companies] = await Promise.all([
-      fetchJSON(`${API_BASE}/products`),
-      fetchJSON(`${API_BASE}/companies`).catch(() => []),
+      Storefront.fetchJSON(`${Storefront.API_BASE}/products`),
+      Storefront.fetchJSON(`${Storefront.API_BASE}/companies`).catch(() => []),
     ]);
-    state.products = products || [];
-    state.companies = companies || [];
-    populateCategorySelect(state.products);
-    populateCompanySelect(state.companies);
-    applyInitialParams();
-    renderProducts();
+    shopState.products = Array.isArray(products) ? products : [];
+    shopState.companies = Array.isArray(companies) ? companies : [];
+    populateFilters();
+    applyUrlParams();
+    render();
   } catch (error) {
     console.error(error);
-    const status = document.getElementById("category-status");
-    if (status) status.innerHTML = `<div class="toast error">Could not load catalog data.</div>`;
+    const empty = document.getElementById("category-empty");
+    empty.hidden = false;
+    empty.textContent = "The catalog could not be loaded. Please refresh in a moment.";
   }
-  if (form) {
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      renderProducts();
-    });
-  }
-  if (resetButton && form) {
-    resetButton.addEventListener("click", () => {
-      form.reset();
-      renderProducts();
-    });
-  }
+
+  document.getElementById("shop-filters")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    render();
+  });
+  document.getElementById("filter-reset")?.addEventListener("click", () => {
+    document.getElementById("shop-filters").reset();
+    render();
+  });
+  document.getElementById("sort-products")?.addEventListener("change", render);
 }
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", initShop);

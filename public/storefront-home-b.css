@@ -1,0 +1,40 @@
+.store-card-eyebrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--store-muted); font-size: .68rem; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; }
+.store-stock { color: var(--store-green); text-transform: none; letter-spacing: 0; }
+.store-stock.is-out { color: var(--store-red); }
+.store-card-content h3 { min-height: 48px; margin: 10px 0 8px; font-size: .98rem; line-height: 1.45; }
+.store-card-content h3 a:hover { color: var(--store-blue); }
+.store-card-summary { min-height: 38px; margin: 0 0 13px; color: var(--store-muted); font-size: .76rem; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.store-card-price { min-height: 44px; display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.store-card-price strong { color: var(--store-blue); font-size: 1.08rem; }
+.store-card-price del { color: #98a2b3; font-size: .78rem; }
+.store-card-actions { margin-top: 14px; display: grid; grid-template-columns: 1fr 1.1fr; gap: 8px; }
+.store-card-actions .store-btn { padding: 0 10px; font-size: .76rem; }
+.store-empty { padding: 55px 25px; border: 1px dashed #cbd2dc; border-radius: 10px; text-align: center; color: var(--store-muted); background: #fff; }
+
+.store-promo-band { padding: 52px 0; background: linear-gradient(120deg,#0d2848,#0d4d8d 70%,#1479c9); color: #fff; }
+.store-promo-grid { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 35px; }
+.store-promo-grid h2 { margin: 7px 0 9px; font-size: clamp(1.8rem, 3.5vw, 3.2rem); line-height: 1.07; letter-spacing: -.04em; }
+.store-promo-grid p { max-width: 800px; margin: 0; color: rgba(255,255,255,.75); line-height: 1.65; }
+.store-promo-band .store-section-kicker { color: #8bdcff; }
+.store-service-strip { padding: 40px 0; border-top: 1px solid var(--store-line); background: #fff; }
+.store-service-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 22px; }
+.store-service-grid article { display: flex; gap: 15px; align-items: flex-start; }
+.store-service-grid article > span { width: 48px; height: 48px; flex: 0 0 48px; display: grid; place-items: center; border-radius: 9px; background: #eaf4fc; font-size: 1.35rem; }
+.store-service-grid h3 { margin: 2px 0 6px; font-size: .95rem; }
+.store-service-grid p { margin: 0; color: var(--store-muted); font-size: .8rem; line-height: 1.55; }
+
+.store-footer { padding: 60px 0 22px; background: #0c1522; color: #fff; }
+.store-footer-grid { display: grid; grid-template-columns: 1.5fr repeat(3,1fr); gap: 50px; }
+.store-footer-logo { width: 230px; max-height: 80px; object-fit: contain; filter: brightness(0) invert(1); }
+.store-footer p { color: #9eabbc; line-height: 1.65; font-size: .86rem; }
+.store-footer h3 { margin: 0 0 16px; font-size: .92rem; }
+.store-footer a { display: block; margin: 10px 0; color: #aeb9c7; font-size: .84rem; }
+.store-footer a:hover { color: #fff; }
+.store-footer-bottom { margin-top: 42px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.1); display: flex; justify-content: space-between; gap: 20px; color: #7f8c9d; font-size: .76rem; }
+.store-floating-whatsapp { position: fixed; z-index: 80; right: 22px; bottom: 22px; width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: #20b75a; color: #fff !important; font-size: .72rem; font-weight: 950; box-shadow: 0 14px 30px rgba(32,183,90,.34); }
+.store-toast { position: fixed; z-index: 100; left: 50%; bottom: 28px; transform: translate(-50%,20px); min-width: 260px; max-width: calc(100% - 36px); padding: 13px 18px; border-radius: 8px; color: #fff; text-align: center; font-size: .86rem; font-weight: 750; opacity: 0; pointer-events: none; transition: .2s ease; box-shadow: var(--store-shadow); }
+.store-toast.is-visible { opacity: 1; transform: translate(-50%,0); }
+.store-toast.is-success { background: #177a4b; }
+.store-toast.is-error { background: #b42318; }
+
+.store-shop-hero { padding: 55px 0 44px; background: linear-gradient(135deg,#eef5fb,#fff); border-bottom: 1px solid var(--store-line); }

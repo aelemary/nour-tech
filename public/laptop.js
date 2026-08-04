@@ -1,493 +1,147 @@
-const API_BASE = "/api";
-let statusTimer = null;
-const TYPE_LABELS = {
-  laptop: "Laptop",
-  gpu: "GPU",
-  cpu: "CPU",
-  hdd: "HDD",
-  storage: "Storage",
-  motherboard: "Motherboard",
-  ram: "RAM",
-  monitor: "Monitor",
-  printer: "Printer",
-  desktop: "Desktop",
-  power: "Power",
-  accessory: "Accessory",
-};
+let currentProduct = null;
 
-function escapeHtml(value = "") {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function formatTypeLabel(type) {
-  const normalized = String(type || "").trim().toLowerCase();
-  if (!normalized) return "Product";
-  if (TYPE_LABELS[normalized]) return TYPE_LABELS[normalized];
-  if (normalized === "ram") return "RAM";
-  return normalized
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-async function fetchJSON(url, options = {}) {
-  const response = await fetch(url, { credentials: "include", ...options });
-  if (!response.ok) {
-    const text = await response.text();
-    let message = text;
-    try {
-      const data = JSON.parse(text);
-      if (data && data.error) message = data.error;
-    } catch (error) {
-      // ignore parse errors
-    }
-    const err = new Error(message || `Request failed with status ${response.status}`);
-    err.status = response.status;
-    throw err;
-  }
-  return response.json();
-}
-
-function setYear() {
-  const yearEl = document.getElementById("year");
-  if (yearEl) {
-    yearEl.textContent = new Date().getFullYear();
-  }
-}
-
-function updateCartCount() {
-  if (!window.Cart) return;
-  const badge = document.getElementById("cart-count");
-  if (badge) {
-    badge.textContent = window.Cart.count();
-  }
-}
-
-function renderImages(images = [], title = "Product image") {
-  if (!images.length) {
-    images = ["https://placehold.co/800x500?text=Product+Preview"];
-  }
-  const hasMultiple = images.length > 1;
-  const slides = images
-    .map(
-      (url, index) =>
-        `<figure class="gallery-slide" data-index="${index}">
-          <img src="${escapeHtml(url)}" alt="${escapeHtml(title)} ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" />
-        </figure>`
-    )
-    .join("");
-  return `
-    <div class="gallery-slider" data-gallery tabindex="0" aria-label="Product images">
-      <button class="gallery-nav prev" type="button" aria-label="Previous image"${hasMultiple ? "" : " disabled"}>‹</button>
-      <div class="gallery-window">
-        <div class="gallery-track">
-          ${slides}
-        </div>
-      </div>
-      <button class="gallery-nav next" type="button" aria-label="Next image"${hasMultiple ? "" : " disabled"}>›</button>
-    </div>
-  `;
-}
-
-function renderSpec(label, value) {
-  if (!value) return "";
-  return `<div class="spec-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
-}
-
-function normalizeSpecLabel(value = "") {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[_/-]+/g, " ")
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function humanizeSpecKey(key) {
-  return String(key || "")
-    .replace(/[_-]+/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function flattenSpecs(value, trail = [], items = [], limit = 120) {
-  if (items.length >= limit || value == null || value === "") return items;
-  if (Array.isArray(value)) {
-    value.forEach((entry) => {
-      if (items.length >= limit) return;
-      flattenSpecs(entry, trail, items, limit);
-    });
-    return items;
-  }
-  if (typeof value === "object") {
-    Object.entries(value).forEach(([key, entry]) => {
-      if (items.length >= limit || entry == null || entry === "") return;
-      flattenSpecs(entry, trail.concat(humanizeSpecKey(key)), items, limit);
-    });
-    return items;
-  }
-  if (!trail.length) return items;
-  items.push({
-    label: trail.join(" / "),
-    value: String(value),
-  });
-  return items;
-}
-
-function collectSpecEntries(product) {
+function specEntries(product) {
   const entries = [];
-  const addObject = (source) => {
-    if (!source || typeof source !== "object" || Array.isArray(source)) return;
-    Object.entries(source).forEach(([label, value]) => {
-      if (value == null || value === "") return;
-      if (typeof value === "object") return;
-      entries.push({ label: humanizeSpecKey(label), value: String(value) });
-    });
+  const push = (label, value) => {
+    const clean = String(value || "").trim();
+    if (clean) entries.push([label, clean]);
   };
-
-  addObject(product.specsRaw?.manual);
-  addObject(product.specsRaw?.icecat?.specs);
-  addObject(product.specsRaw?.specs);
-  addObject(product.specsRaw);
-  flattenSpecs(product.specsRaw, [], entries, 160);
+  push("Brand", product.company?.name);
+  push("Model", product.shortName);
+  push("Processor", product.cpu);
+  push("Graphics", product.gpu);
+  push("Memory", product.ram);
+  push("Storage", product.storage);
+  push("Display", product.display);
+  push("Warranty", product.warranty ? `${product.warranty} year${product.warranty === 1 ? "" : "s"}` : "");
+  Object.entries(Storefront.manualSpecs(product)).forEach(([key, value]) => {
+    const hidden = ["price", "sale price", "current price", "old price", "compare at price", "regular price", "stock", "quantity", "featured", "is featured", "badge", "label", "shipping", "shipping period", "delivery", "payment", "payment methods", "condition", "subcategory", "sub category", "collection"].includes(String(key).trim().toLowerCase());
+    if (!hidden && !entries.some(([label]) => label.toLowerCase() === String(key).toLowerCase())) push(key, value);
+  });
   return entries;
 }
 
-const COMMON_SPEC_FIELDS = [
-  { label: "Model", keys: ["model", "product code", "part number", "mpn"] },
-  { label: "Processor", keys: ["processor model", "processor family", "cpu", "processor"] },
-  { label: "Graphics", keys: ["discrete graphics card model", "graphics adapter", "graphics processor", "gpu", "graphics"] },
-  { label: "Memory", keys: ["internal memory", "system memory", "ram", "memory"] },
-  { label: "Memory Type", keys: ["internal memory type", "memory type", "graphics card memory type"] },
-  { label: "Storage", keys: ["total storage capacity", "ssd capacity", "storage", "hdd capacity"] },
-  { label: "Storage Type", keys: ["storage media", "ssd form factor", "drive type"] },
-  { label: "Display Size", keys: ["display diagonal", "screen size"] },
-  { label: "Display Resolution", keys: ["display resolution", "resolution"] },
-  { label: "Display Type", keys: ["panel type", "display technology", "touchscreen"] },
-  { label: "Operating System", keys: ["operating system installed", "operating system", "os"] },
-  { label: "Battery", keys: ["battery capacity", "battery technology", "number of battery cells"] },
-  { label: "Weight", keys: ["weight"] },
-  { label: "Dimensions", keys: ["width", "depth", "height", "dimensions"] },
-];
-
-const TYPE_SPEC_FIELDS = {
-  gpu: [
-    { label: "Graphics Processor", keys: ["graphics processor", "graphics processor family", "gpu"] },
-    { label: "Video Memory", keys: ["discrete graphics card memory", "graphics card memory", "memory"] },
-    { label: "Memory Bus", keys: ["memory bus"] },
-    { label: "Interface", keys: ["interface type", "pci express", "host interface"] },
-    { label: "HDMI", keys: ["hdmi ports quantity", "hdmi"] },
-    { label: "DisplayPort", keys: ["displayports quantity", "displayport"] },
-    { label: "Power", keys: ["minimum system power supply", "power consumption"] },
-  ],
-  cpu: [
-    { label: "Processor", keys: ["processor model", "processor family", "cpu"] },
-    { label: "Cores", keys: ["processor cores", "cores"] },
-    { label: "Threads", keys: ["processor threads", "threads"] },
-    { label: "Base Frequency", keys: ["processor base frequency", "base frequency"] },
-    { label: "Boost Frequency", keys: ["processor boost frequency", "turbo frequency"] },
-    { label: "Socket", keys: ["processor socket", "socket"] },
-    { label: "Cache", keys: ["processor cache", "cache"] },
-  ],
-  motherboard: [
-    { label: "Socket", keys: ["processor socket", "socket"] },
-    { label: "Chipset", keys: ["motherboard chipset", "chipset"] },
-    { label: "Memory Slots", keys: ["memory slots", "number of memory slots"] },
-    { label: "Max Memory", keys: ["maximum internal memory", "max memory"] },
-    { label: "Form Factor", keys: ["motherboard form factor", "form factor"] },
-    { label: "Networking", keys: ["ethernet lan", "wi fi", "bluetooth"] },
-  ],
-  hdd: [
-    { label: "Capacity", keys: ["hdd capacity", "ssd capacity", "storage capacity", "capacity"] },
-    { label: "Interface", keys: ["interface", "serial ata", "sata"] },
-    { label: "Drive Size", keys: ["hdd size", "drive size", "form factor"] },
-    { label: "Speed", keys: ["hdd speed", "read speed", "write speed"] },
-  ],
-  storage: [
-    { label: "Capacity", keys: ["ssd capacity", "hdd capacity", "storage capacity", "capacity", "storage"] },
-    { label: "Drive Type", keys: ["storage media", "drive type", "ssd form factor"] },
-    { label: "Interface", keys: ["interface", "host interface", "serial ata", "sata"] },
-    { label: "Read Speed", keys: ["read speed", "sequential read"] },
-    { label: "Write Speed", keys: ["write speed", "sequential write"] },
-  ],
-  ram: [
-    { label: "Capacity", keys: ["internal memory", "memory capacity", "ram", "memory"] },
-    { label: "Memory Type", keys: ["internal memory type", "memory type"] },
-    { label: "Speed", keys: ["memory clock speed", "memory speed"] },
-    { label: "Form Factor", keys: ["memory form factor", "form factor"] },
-  ],
-  monitor: [
-    { label: "Display Size", keys: ["display diagonal", "screen size"] },
-    { label: "Resolution", keys: ["display resolution", "resolution"] },
-    { label: "Panel Type", keys: ["panel type", "display technology"] },
-    { label: "Refresh Rate", keys: ["maximum refresh rate", "refresh rate"] },
-    { label: "Response Time", keys: ["response time", "response time mprt"] },
-    { label: "Ports", keys: ["hdmi ports quantity", "displayports quantity", "ports"] },
-  ],
-  printer: [
-    { label: "Print Technology", keys: ["print technology", "printing"] },
-    { label: "Colour", keys: ["colour", "color"] },
-    { label: "Print Speed", keys: ["print speed", "printing speed"] },
-    { label: "Resolution", keys: ["maximum resolution", "print resolution", "resolution"] },
-    { label: "Connectivity", keys: ["wi fi", "ethernet lan", "usb port", "connectivity"] },
-  ],
-  desktop: COMMON_SPEC_FIELDS,
-  power: [
-    { label: "Power", keys: ["total power", "rated power", "power"] },
-    { label: "Efficiency", keys: ["80 plus certification", "efficiency"] },
-    { label: "Form Factor", keys: ["power supply unit form factor", "form factor"] },
-    { label: "Cooling", keys: ["fan diameter", "cooling"] },
-  ],
-  accessory: COMMON_SPEC_FIELDS,
-};
-
-function findSpecValue(entries, keys) {
-  const normalizedKeys = keys.map(normalizeSpecLabel).filter(Boolean);
-  const exact = entries.find((entry) => normalizedKeys.includes(normalizeSpecLabel(entry.label)));
-  if (exact) return exact.value;
-  const partial = entries.find((entry) => {
-    const label = normalizeSpecLabel(entry.label);
-    return normalizedKeys.some((key) => label.includes(key) || key.includes(label));
-  });
-  return partial?.value || "";
-}
-
-function buildCuratedSpecs(product, warrantyLabel) {
-  const entries = collectSpecEntries(product);
-  const type = String(product.type || "").toLowerCase();
-  const fields = [...(TYPE_SPEC_FIELDS[type] || COMMON_SPEC_FIELDS)];
-  if (type !== "laptop") {
-    fields.unshift({ label: "Model", keys: ["model", "product code", "part number", "mpn"] });
-  }
-  const specs = [];
-  const usedLabels = new Set();
-  const usedValues = new Set();
-  const addSpec = (label, value) => {
-    const normalized = normalizeSpecLabel(label);
-    const normalizedValue = normalizeSpecLabel(value);
-    if (!value || usedLabels.has(normalized) || usedValues.has(normalizedValue)) return;
-    specs.push(renderSpec(label, value));
-    usedLabels.add(normalized);
-    usedValues.add(normalizedValue);
-  };
-
-  fields.forEach((field) => addSpec(field.label, findSpecValue(entries, field.keys)));
-
-  addSpec("Graphics", product.gpu);
-  addSpec("Processor", product.cpu);
-  addSpec("Memory", product.ram);
-  addSpec("Storage", product.storage);
-  addSpec("Display", product.display);
-  addSpec("Model", product.shortName);
-  addSpec("Warranty", warrantyLabel);
-
-  return specs.slice(0, 18);
-}
-
-function buildAdvancedSpecs(product) {
-  const icecatSpecs = product.specsRaw?.icecat?.specs;
-  const curatedEntries =
-    icecatSpecs && typeof icecatSpecs === "object" && !Array.isArray(icecatSpecs)
-      ? Object.entries(icecatSpecs).map(([label, value]) => ({
-          label: humanizeSpecKey(label),
-          value: value == null ? "" : String(value),
-        }))
-      : flattenSpecs(product.specsRaw?.icecat || product.specsRaw, [], [], 500);
-  const seen = new Set();
-  const advanced = [];
-  curatedEntries.forEach((entry) => {
-    const label = String(entry.label || "").trim();
-    const value = String(entry.value || "").trim();
-    const key = `${normalizeSpecLabel(label)}:${normalizeSpecLabel(value)}`;
-    if (!label || !value || seen.has(key)) return;
-    seen.add(key);
-    advanced.push(renderSpec(label, value));
-  });
-  return advanced;
-}
-
-function showStatus(message, type = "success") {
-  const container = document.getElementById("order-status");
-  if (!container) return;
-  if (statusTimer) {
-    clearTimeout(statusTimer);
-  }
-  container.innerHTML = `<div class="toast ${type === "error" ? "error" : ""}">${message}</div>`;
-  statusTimer = window.setTimeout(() => {
-    container.innerHTML = "";
-  }, 3000);
+function renderGallery(product) {
+  const images = product.images?.length ? product.images : [Storefront.productImage(product, 900, 700)];
+  return `
+    <div class="store-product-gallery" data-gallery>
+      <div class="store-main-image"><img id="main-product-image" src="${Storefront.escapeHtml(images[0])}" alt="${Storefront.escapeHtml(product.title)}" /></div>
+      <div class="store-thumbnails">
+        ${images.map((image, index) => `<button type="button" class="${index === 0 ? "is-active" : ""}" data-image="${Storefront.escapeHtml(image)}"><img src="${Storefront.escapeHtml(image)}" alt="${Storefront.escapeHtml(product.title)} view ${index + 1}" /></button>`).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function renderProduct(product) {
-  const layout = document.getElementById("detail-layout");
-  const typeLabel = formatTypeLabel(product.type);
-  const warrantyLabel =
-    product.warranty && product.warranty > 0
-      ? `${product.warranty} year${product.warranty > 1 ? "s" : ""}`
-      : "";
-  const normalizedDescription = normalizeSpecLabel(product.description);
-  const descriptionRepeatsTitle =
-    normalizedDescription &&
-    [product.title, product.shortName].some(
-      (value) => value && normalizeSpecLabel(value) === normalizedDescription
-    );
-  const description = product.description && !descriptionRepeatsTitle
-    ? `<p class="detail-description">${escapeHtml(product.description)}</p>`
-    : "";
-  const specs = buildCuratedSpecs(product, warrantyLabel);
-  const advancedSpecs = buildAdvancedSpecs(product);
-  layout.innerHTML = `
-    <div class="detail-gallery gallery">
-      ${renderImages(product.images, product.title)}
-    </div>
-    <div class="detail-copy">
-      <div class="detail-heading">
-        <p class="badge">${escapeHtml(product.company?.name || "Unassigned")} • ${escapeHtml(typeLabel)}</p>
-        <h1 class="detail-title">${escapeHtml(product.title)}</h1>
-        ${description}
+  currentProduct = product;
+  const meta = Storefront.productMeta(product);
+  const detail = document.getElementById("product-detail");
+  const loading = document.getElementById("product-loading");
+  const stockText = meta.stock === null ? "Available to order" : meta.stock > 0 ? `Only ${meta.stock} left in stock` : "Out of stock";
+  const discount = meta.compareAtPrice > meta.price && meta.price > 0
+    ? Math.round(((meta.compareAtPrice - meta.price) / meta.compareAtPrice) * 100)
+    : 0;
+  detail.innerHTML = `
+    ${renderGallery(product)}
+    <div class="store-product-info">
+      <p class="store-product-brand">${Storefront.escapeHtml(product.company?.name || "Nour Tech")} · ${Storefront.escapeHtml(Storefront.categoryLabel(product.type))}</p>
+      ${meta.badge ? `<span class="store-product-label">${Storefront.escapeHtml(meta.badge)}</span>` : ""}
+      <h1>${Storefront.escapeHtml(product.title)}</h1>
+      <div class="store-product-rating"><span>★★★★★</span><small>Premium selection by Nour Tech</small></div>
+      <div class="store-product-price-row">
+        <strong>${Storefront.escapeHtml(Storefront.formatCurrency(meta.price))}</strong>
+        ${meta.compareAtPrice > meta.price && meta.price > 0 ? `<del>${Storefront.escapeHtml(Storefront.formatCurrency(meta.compareAtPrice))}</del><span class="store-discount">Save ${discount}%</span>` : ""}
       </div>
-      <section class="detail-specs detail-specs-inline">
-        <h2>Specifications</h2>
-        <div class="spec-list">
-          ${specs.join("") || `<div class="field-hint">No specifications listed yet.</div>`}
-        </div>
-        ${
-          advancedSpecs.length
-            ? `<button class="spec-toggle spec-toggle-bottom" type="button" data-spec-toggle aria-expanded="false" aria-controls="advanced-specs">Advanced specs</button>`
-            : ""
-        }
-        ${
-          advancedSpecs.length
-            ? `<div id="advanced-specs" class="spec-list advanced-spec-list" hidden>${advancedSpecs.join("")}</div>`
-            : ""
-        }
-      </section>
-    </div>
-    <aside class="panel detail-purchase">
-      <h2>Order Options</h2>
-      <p class="field-hint">
-        Submit your order details and our team will contact you to confirm availability.
-      </p>
-      <div class="btn-stack">
-        <button class="btn btn-primary" data-buy-now="${product.id}">Buy Now</button>
-        <button class="btn btn-outline" data-add-cart="${product.id}">Add to Cart</button>
-        <a class="btn btn-outline" href="/cart.html">View Cart</a>
+      <p class="store-product-summary">${Storefront.escapeHtml(Storefront.productSummary(product) || product.description || "Contact us for full details and availability.")}</p>
+      <div class="store-stock-line ${meta.stock === 0 ? "is-out" : ""}"><span></span>${Storefront.escapeHtml(stockText)}</div>
+      <div class="store-purchase-row">
+        <div class="store-quantity"><button type="button" data-qty-minus>−</button><input id="product-quantity" type="number" min="1" max="99" value="1" /><button type="button" data-qty-plus>+</button></div>
+        <button class="store-btn store-btn-primary store-btn-large" type="button" data-add-product ${meta.stock === 0 ? "disabled" : ""}>${meta.stock === 0 ? "Sold out" : "Add to cart"}</button>
       </div>
-      <div id="order-status" class="order-status"></div>
-      <p class="field-hint">
-        Need multiple units or a custom tweak? Add the product to your cart and leave detailed notes at checkout.
-      </p>
-    </aside>
+      <button class="store-btn store-btn-dark store-btn-large store-buy-now" type="button" data-buy-product ${meta.stock === 0 ? "disabled" : ""}>Buy now</button>
+      <div class="store-secondary-actions"><button type="button" data-save-product>${Storefront.isWishlisted(product.id) ? "♥ Saved" : "♡ Add to wishlist"}</button><a data-whatsapp-link href="https://wa.me/201034898787" target="_blank" rel="noopener noreferrer">Need help?</a></div>
+      <div class="store-product-benefits">
+        <article><span>🛡️</span><div><strong>Condition & Warranty</strong><p>${Storefront.escapeHtml(meta.condition)}${product.warranty ? ` with ${product.warranty} year${product.warranty === 1 ? "" : "s"} warranty` : ""}</p></div></article>
+        <article><span>🚚</span><div><strong>Shipping Period</strong><p>${Storefront.escapeHtml(meta.shipping)}</p></div></article>
+        <article><span>💳</span><div><strong>Payment Methods</strong><p>${Storefront.escapeHtml(meta.payment)}</p></div></article>
+      </div>
+      ${meta.sku ? `<p class="store-sku">SKU: ${Storefront.escapeHtml(meta.sku)}</p>` : ""}
+    </div>
   `;
-  initSpecToggle();
-  initGallery();
-}
+  loading.hidden = true;
+  detail.hidden = false;
+  document.getElementById("breadcrumb-current").textContent = product.title;
+  document.title = `${product.title} | Nour Tech`;
 
-function initSpecToggle() {
-  const toggle = document.querySelector("[data-spec-toggle]");
-  const advanced = document.getElementById("advanced-specs");
-  if (!toggle || !advanced) return;
-  toggle.addEventListener("click", () => {
-    const open = advanced.hidden;
-    advanced.hidden = !open;
-    toggle.setAttribute("aria-expanded", String(open));
-    toggle.textContent = open ? "Hide advanced specs" : "Advanced specs";
-  });
-}
-
-function initGallery() {
-  const slider = document.querySelector("[data-gallery]");
-  if (!slider) return;
-  const track = slider.querySelector(".gallery-track");
-  const slides = Array.from(slider.querySelectorAll(".gallery-slide"));
-  if (!track || !slides.length) return;
-  const prev = slider.querySelector(".gallery-nav.prev");
-  const next = slider.querySelector(".gallery-nav.next");
-  let index = 0;
-
-  const clampIndex = (value) => Math.min(Math.max(value, 0), slides.length - 1);
-
-  const setIndex = (value) => {
-    index = clampIndex(value);
-    track.style.transform = `translateX(-${index * 100}%)`;
-    if (prev) prev.disabled = index === 0;
-    if (next) next.disabled = index === slides.length - 1;
-  };
-
-  if (prev) {
-    prev.addEventListener("click", () => setIndex(index - 1));
-  }
-  if (next) {
-    next.addEventListener("click", () => setIndex(index + 1));
-  }
-
-  slider.addEventListener("keydown", (event) => {
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      setIndex(index - 1);
-    } else if (event.key === "ArrowRight") {
-      event.preventDefault();
-      setIndex(index + 1);
-    }
-  });
-
-  setIndex(0);
-}
-
-function attachPurchaseActions(product) {
-  const addButton = document.querySelector("[data-add-cart]");
-  if (addButton) {
-    if (window.Cart) {
-      addButton.addEventListener("click", () => {
-        window.Cart.add(product.id);
-        updateCartCount();
-        showStatus(`${product.title} added to cart.`);
-      });
-    } else {
-      addButton.disabled = true;
-    }
-  }
-
-  const buyButton = document.querySelector("[data-buy-now]");
-  if (buyButton) {
-    buyButton.addEventListener("click", () => {
-      if (window.Cart) {
-        window.Cart.setBuyNow(product.id, 1);
-      }
-      const url = new URL("/checkout.html", window.location.origin);
-      url.searchParams.set("source", "buy");
-      url.searchParams.set("item", product.id);
-      window.location.href = `${url.pathname}${url.search}`;
+  detail.querySelectorAll("[data-image]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.getElementById("main-product-image").src = button.dataset.image;
+      detail.querySelectorAll("[data-image]").forEach((item) => item.classList.toggle("is-active", item === button));
     });
-  }
+  });
+  const quantity = document.getElementById("product-quantity");
+  detail.querySelector("[data-qty-minus]")?.addEventListener("click", () => quantity.value = Math.max(1, Number(quantity.value || 1) - 1));
+  detail.querySelector("[data-qty-plus]")?.addEventListener("click", () => quantity.value = Math.min(99, Number(quantity.value || 1) + 1));
+  detail.querySelector("[data-add-product]")?.addEventListener("click", () => Storefront.addToCart(product, quantity.value));
+  detail.querySelector("[data-buy-product]")?.addEventListener("click", () => {
+    const qty = Math.max(1, Number(quantity.value) || 1);
+    window.Cart?.setBuyNow(product.id, qty);
+    window.location.href = `/checkout.html?source=buy&item=${encodeURIComponent(product.id)}`;
+  });
+  detail.querySelector("[data-save-product]")?.addEventListener("click", (event) => {
+    const active = Storefront.toggleWishlist(product.id);
+    event.currentTarget.textContent = active ? "♥ Saved" : "♡ Add to wishlist";
+    Storefront.toast(active ? "Added to wishlist." : "Removed from wishlist.");
+  });
+  Storefront.boot();
 }
 
-async function init() {
-  setYear();
-  updateCartCount();
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-  const layout = document.getElementById("detail-layout");
+function renderContent(product) {
+  const section = document.getElementById("product-description-section");
+  const description = document.getElementById("product-description");
+  const specs = document.getElementById("product-specifications");
+  const entries = specEntries(product);
+  description.innerHTML = `<h2>Product Description</h2><p>${Storefront.escapeHtml(product.description || "Contact Nour Tech for full product details, availability and purchase advice.")}</p>`;
+  specs.innerHTML = `<h2>Specifications</h2><div class="store-spec-table">${entries.map(([label, value]) => `<div><span>${Storefront.escapeHtml(label)}</span><strong>${Storefront.escapeHtml(value)}</strong></div>`).join("")}</div>`;
+  section.hidden = false;
+  section.querySelectorAll("[data-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      section.querySelectorAll("[data-tab]").forEach((item) => item.classList.toggle("is-active", item === button));
+      description.hidden = button.dataset.tab !== "description";
+      specs.hidden = button.dataset.tab !== "specifications";
+    });
+  });
+}
 
+function renderRelated(product, products) {
+  const related = products.filter((item) => item.id !== product.id && item.type === product.type).slice(0, 4);
+  if (!related.length) return;
+  const section = document.getElementById("related-section");
+  const grid = document.getElementById("related-products");
+  related.forEach((item) => grid.appendChild(Storefront.createProductCard(item)));
+  section.hidden = false;
+}
+
+async function initProduct() {
+  Storefront.boot();
+  const id = new URLSearchParams(window.location.search).get("id");
   if (!id) {
-    layout.innerHTML = `<div class="toast error">Missing product ID. Return to the <a href="/index.html" style="color: inherit; text-decoration: underline;">inventory list</a>.</div>`;
+    document.getElementById("product-loading").textContent = "Missing product ID.";
     return;
   }
-
   try {
-    const product = await fetchJSON(`${API_BASE}/products/${encodeURIComponent(id)}`);
+    const [product, products] = await Promise.all([
+      Storefront.fetchJSON(`${Storefront.API_BASE}/products/${encodeURIComponent(id)}`),
+      Storefront.fetchJSON(`${Storefront.API_BASE}/products`).catch(() => []),
+    ]);
     renderProduct(product);
-    attachPurchaseActions(product);
+    renderContent(product);
+    renderRelated(product, products);
   } catch (error) {
     console.error(error);
-    layout.innerHTML = `<div class="toast error">We couldn't find that product—maybe it was just reserved already.</div>`;
+    document.getElementById("product-loading").textContent = "This product could not be found or is no longer available.";
   }
 }
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", initProduct);
