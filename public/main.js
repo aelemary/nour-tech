@@ -13,6 +13,7 @@ const CATEGORY_LABELS = {
 
 const STOREFRONT_CATEGORIES = ["laptop", "gpu"];
 const CATEGORY_ORDER = ["laptop", "gpu"];
+const FEATURED_LAPTOP_ID = "baf031a7-c94d-477a-adef-90e7b3da603a";
 
 function formatCategoryLabel(type) {
   const normalized = String(type || "").trim().toLowerCase();
@@ -193,7 +194,9 @@ function createProductCard(product) {
 }
 
 function setMerchandisingImages(products) {
-  const laptop = products.find((product) => normalizeCategory(product.type) === "laptop");
+  const laptop =
+    products.find((product) => product.id === FEATURED_LAPTOP_ID) ||
+    products.find((product) => normalizeCategory(product.type) === "laptop");
   const gpu = products.find((product) => normalizeCategory(product.type) === "gpu");
   const mappings = [
     ["hero-laptop-image", laptop],
