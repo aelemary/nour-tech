@@ -27,8 +27,19 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener("resize", () => {
-    if (!window.matchMedia("(max-width: 600px)").matches) {
+    if (!window.matchMedia("(max-width: 760px)").matches) {
       setOpen(false);
     }
   });
+
+  const searchForm = document.getElementById("header-search");
+  if (searchForm && searchForm.dataset.searchBound !== "true") {
+    searchForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const search = String(new FormData(searchForm).get("search") || "").trim();
+      const url = new URL("/category.html", window.location.origin);
+      if (search) url.searchParams.set("search", search);
+      window.location.href = url.toString();
+    });
+  }
 });

@@ -8,17 +8,8 @@ const state = {
 const CATEGORY_LABELS = {
   laptop: "Laptops",
   gpu: "GPUs",
-  cpu: "CPUs",
-  hdd: "HDDs",
-  storage: "Storage",
-  motherboard: "Motherboards",
-  ram: "Memory",
-  monitor: "Monitors",
-  printer: "Printers",
-  desktop: "Desktops",
-  power: "Power",
-  accessory: "Accessories",
 };
+const STOREFRONT_CATEGORIES = ["laptop", "gpu"];
 
 function escapeHtml(value = "") {
   return String(value)
@@ -70,6 +61,7 @@ function updateCartCount() {
 function setupHeaderSearch() {
   const form = document.getElementById("header-search");
   if (!form) return;
+  form.dataset.searchBound = "true";
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const search = String(new FormData(form).get("search") || "").trim();
@@ -110,7 +102,12 @@ function includesFieldOrProductText(product, fieldValue, search) {
 
 function productSummary(product) {
   const title = String(product.title || "").trim().toLowerCase();
-  return [product.shortName, product.description, product.storage, product.ram]
+  const laptopSpecs = [product.cpu, product.gpu, product.ram, product.storage]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" • ");
+  return [laptopSpecs, product.shortName, product.description]
     .map((value) => String(value || "").trim())
     .find((value) => value && value.toLowerCase() !== title) || "";
 }
@@ -145,11 +142,7 @@ function populateCategorySelect(products = []) {
   const dynamicTypes = Array.from(
     new Set(products.map((product) => String(product.type || "").trim().toLowerCase()).filter(Boolean))
   );
-  const knownOrder = Object.keys(CATEGORY_LABELS);
-  const types = [
-    ...knownOrder.filter((type) => dynamicTypes.includes(type)),
-    ...dynamicTypes.filter((type) => !knownOrder.includes(type)).sort(),
-  ];
+  const types = STOREFRONT_CATEGORIES.filter((type) => dynamicTypes.includes(type));
   select.innerHTML = `<option value="">All categories</option>`;
   types.forEach((type) => {
     const option = document.createElement("option");
@@ -179,19 +172,24 @@ function createProductCard(product) {
   card.className = "product-card";
   const typeLabel = formatCategoryLabel(product.type);
   const brandLabel = product.company?.name || "Unassigned";
-  const image =
-    product.images?.[0] || `https://placehold.co/600x400?text=${encodeURIComponent(typeLabel)}`;
+  const image = product.images?.[0] || "/data/nourtechsmall.png";
   const summary = productSummary(product);
   card.innerHTML = `
     <div class="product-media">
       <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
     </div>
     <div class="product-body">
-        <span class="badge">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
-        <h3 class="product-title">${escapeHtml(product.title)}</h3>
-        ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <span class="product-category">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
+      <h3 class="product-title">${escapeHtml(product.title)}</h3>
+      ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <span class="product-card-action">View product</span>
     </div>
   `;
+  card.querySelector("img")?.addEventListener("error", (event) => {
+    if (!event.currentTarget.src.endsWith("/data/nourtechsmall.png")) {
+      event.currentTarget.src = "/data/nourtechsmall.png";
+    }
+  });
   card.addEventListener("click", () => {
     window.location.href = `/laptop.html?id=${encodeURIComponent(product.id)}`;
   });
@@ -235,7 +233,8 @@ function renderProducts() {
 
 function applyInitialParams() {
   const params = new URLSearchParams(window.location.search);
-  const type = params.get("type") || "";
+  const requestedType = String(params.get("type") || "").toLowerCase();
+  const type = STOREFRONT_CATEGORIES.includes(requestedType) ? requestedType : "";
   const search = params.get("search") || "";
   const categoryInput = document.getElementById("filter-category");
   const searchInput = document.getElementById("filter-search");
@@ -249,15 +248,25 @@ async function init() {
   setYear();
   updateCartCount();
   setupHeaderSearch();
+  const filterDisclosure = document.getElementById("filter-disclosure");
+  if (filterDisclosure && window.matchMedia("(max-width: 760px)").matches) {
+    filterDisclosure.removeAttribute("open");
+  }
   const form = document.getElementById("category-filter-form");
   const resetButton = document.getElementById("filter-reset");
   try {
-    const [products, companies] = await Promise.all([
-      fetchJSON(`${API_BASE}/products`),
+    const [categoryInventories, companies] = await Promise.all([
+      Promise.all(
+        STOREFRONT_CATEGORIES.map((type) => fetchJSON(`${API_BASE}/products?type=${encodeURIComponent(type)}`))
+      ),
       fetchJSON(`${API_BASE}/companies`).catch(() => []),
     ]);
-    state.products = products || [];
-    state.companies = companies || [];
+    const products = categoryInventories.flat();
+    state.products = (products || []).filter((product) =>
+      STOREFRONT_CATEGORIES.includes(String(product.type || "").trim().toLowerCase())
+    );
+    const storefrontCompanyIds = new Set(state.products.map((product) => product.companyId).filter(Boolean));
+    state.companies = (companies || []).filter((company) => storefrontCompanyIds.has(company.id));
     populateCategorySelect(state.products);
     populateCompanySelect(state.companies);
     applyInitialParams();

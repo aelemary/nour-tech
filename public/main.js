@@ -9,32 +9,10 @@ let statusTimer = null;
 const CATEGORY_LABELS = {
   laptop: "Laptops",
   gpu: "GPUs",
-  cpu: "CPUs",
-  hdd: "HDDs",
-  storage: "Storage",
-  motherboard: "Motherboards",
-  ram: "Memory",
-  monitor: "Monitors",
-  printer: "Printers",
-  desktop: "Desktops",
-  power: "Power",
-  accessory: "Accessories",
 };
 
-const CATEGORY_ORDER = [
-  "laptop",
-  "gpu",
-  "cpu",
-  "storage",
-  "hdd",
-  "motherboard",
-  "ram",
-  "monitor",
-  "printer",
-  "desktop",
-  "power",
-  "accessory",
-];
+const STOREFRONT_CATEGORIES = ["laptop", "gpu"];
+const CATEGORY_ORDER = ["laptop", "gpu"];
 
 function formatCategoryLabel(type) {
   const normalized = String(type || "").trim().toLowerCase();
@@ -143,6 +121,7 @@ function populateCategoryFilter(products = []) {
 function setupHeaderSearch() {
   const form = document.getElementById("header-search");
   if (!form) return;
+  form.dataset.searchBound = "true";
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const search = String(new FormData(form).get("search") || "").trim();
@@ -172,7 +151,12 @@ function orderedCategories(grouped) {
 
 function productSummary(product) {
   const title = String(product.title || "").trim().toLowerCase();
-  return [product.shortName, product.description, product.storage, product.ram]
+  const laptopSpecs = [product.cpu, product.gpu, product.ram, product.storage]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" • ");
+  return [laptopSpecs, product.shortName, product.description]
     .map((value) => String(value || "").trim())
     .find((value) => value && value.toLowerCase() !== title) || "";
 }
@@ -182,25 +166,49 @@ function createProductCard(product) {
   card.className = "product-card rail-card";
   const typeLabel = formatCategoryLabel(product.type);
   const brandLabel = product.company?.name || "Unassigned";
-  const image =
-    product.images?.[0] || `https://placehold.co/600x400?text=${encodeURIComponent(typeLabel)}`;
+  const image = product.images?.[0] || "/data/nourtechsmall.png";
   const summary = productSummary(product);
   card.innerHTML = `
     <div class="product-media">
       <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
     </div>
     <div class="product-body">
-        <span class="badge">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
-        <h3 class="product-title">${escapeHtml(product.title)}</h3>
-        ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <span class="product-category">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
+      <h3 class="product-title">${escapeHtml(product.title)}</h3>
+      ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <span class="product-card-action">View product</span>
     </div>
   `;
+  card.querySelector("img")?.addEventListener("error", (event) => {
+    if (!event.currentTarget.src.endsWith("/data/nourtechsmall.png")) {
+      event.currentTarget.src = "/data/nourtechsmall.png";
+    }
+  });
   const detailUrl = `/laptop.html?id=${encodeURIComponent(product.id)}`;
   card.dataset.href = detailUrl;
   card.addEventListener("click", (event) => {
     window.location.href = detailUrl;
   });
   return card;
+}
+
+function setMerchandisingImages(products) {
+  const laptop = products.find((product) => normalizeCategory(product.type) === "laptop");
+  const gpu = products.find((product) => normalizeCategory(product.type) === "gpu");
+  const mappings = [
+    ["hero-laptop-image", laptop],
+    ["category-laptop-image", laptop],
+    ["hero-gpu-image", gpu],
+    ["category-gpu-image", gpu],
+  ];
+  mappings.forEach(([id, product]) => {
+    const image = document.getElementById(id);
+    if (!image) return;
+    image.src = product?.images?.[0] || "/data/nourtechsmall.png";
+    image.addEventListener("error", () => {
+      if (!image.src.endsWith("/data/nourtechsmall.png")) image.src = "/data/nourtechsmall.png";
+    });
+  });
 }
 
 function setYear() {
@@ -246,30 +254,23 @@ function renderProducts(products) {
     const items = grouped[type] || [];
     if (!items.length) return;
     const section = document.createElement("section");
-    section.className = "catalog-section product-rail-section";
+    section.className = `catalog-section store-product-section store-product-section-${type}`;
     section.innerHTML = `
       <div class="catalog-heading">
-        <h2>${formatCategoryLabel(type)}</h2>
-        <div class="rail-heading-actions">
-          <button class="rail-button" type="button" data-rail-prev aria-label="Scroll ${escapeHtml(formatCategoryLabel(type))} left">‹</button>
-          <button class="rail-button" type="button" data-rail-next aria-label="Scroll ${escapeHtml(formatCategoryLabel(type))} right">›</button>
-          <a href="/category.html?type=${encodeURIComponent(type)}">View all ${items.length}</a>
+        <div>
+          <span class="store-section-kicker">${type === "laptop" ? "Work, create and play anywhere" : "Desktop performance starts here"}</span>
+          <h2>${formatCategoryLabel(type)}</h2>
         </div>
+        <a class="store-view-all" href="/category.html?type=${encodeURIComponent(type)}">View all ${items.length}</a>
       </div>
-      <div class="product-rail"></div>
+      <div class="store-promo-band">
+        <strong>${type === "laptop" ? "Find your next everyday machine" : "Give your PC the graphics power it deserves"}</strong>
+        <span>${type === "laptop" ? "Compare processors, memory, storage and displays." : "Explore GPUs for gaming, creation and demanding workloads."}</span>
+      </div>
+      <div class="store-product-grid"></div>
     `;
-    const rail = section.querySelector(".product-rail");
-    items.slice(0, 16).forEach((product) => rail.appendChild(createProductCard(product)));
-    const prev = section.querySelector("[data-rail-prev]");
-    const next = section.querySelector("[data-rail-next]");
-    const scrollRail = (direction) => {
-      rail.scrollBy({
-        left: direction * Math.max(rail.clientWidth * 0.85, 260),
-        behavior: "smooth",
-      });
-    };
-    if (prev) prev.addEventListener("click", () => scrollRail(-1));
-    if (next) next.addEventListener("click", () => scrollRail(1));
+    const grid = section.querySelector(".store-product-grid");
+    items.slice(0, 10).forEach((product) => grid.appendChild(createProductCard(product)));
     fragment.appendChild(section);
   });
   results.appendChild(fragment);
@@ -281,9 +282,15 @@ async function init() {
   updateCartCount();
   setupHeaderSearch();
   try {
-    const inventory = await loadInventory();
-    state.allProducts = inventory || [];
-    renderProducts(inventory);
+    const categoryInventories = await Promise.all(
+      STOREFRONT_CATEGORIES.map((type) => loadInventory({ type }))
+    );
+    const inventory = categoryInventories.flat();
+    state.allProducts = (inventory || []).filter((product) =>
+      STOREFRONT_CATEGORIES.includes(normalizeCategory(product.type))
+    );
+    setMerchandisingImages(state.allProducts);
+    renderProducts(state.allProducts);
   } catch (error) {
     console.error(error);
     showInventoryStatus("Could not load inventory right now.", "error");
