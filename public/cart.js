@@ -47,14 +47,25 @@ function showStatus(message, type = "success") {
   }, 3000);
 }
 
+function formatCurrency(amount, currency = "EGP") {
+  if (amount == null || !Number.isFinite(Number(amount))) return "Price on request";
+  return new Intl.NumberFormat("en-EG", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(Number(amount));
+}
+
 function renderCart(items) {
   const emptyEl = document.getElementById("cart-empty");
   const contentEl = document.getElementById("cart-content");
   const body = document.getElementById("cart-body");
-  if (!body) return;
+  const totalEl = document.getElementById("cart-total");
+  if (!body || !totalEl) return;
 
   if (!items.length) {
     if (body) body.innerHTML = "";
+    totalEl.textContent = formatCurrency(0);
     if (emptyEl) emptyEl.hidden = false;
     if (contentEl) contentEl.hidden = true;
     return;
@@ -63,10 +74,13 @@ function renderCart(items) {
   if (emptyEl) emptyEl.hidden = true;
   if (contentEl) contentEl.hidden = false;
   body.innerHTML = "";
+  let total = 0;
   const fragment = document.createDocumentFragment();
 
   items.forEach((item) => {
     const quantity = item.quantity || 1;
+    const lineTotal = item.price == null ? null : quantity * Number(item.price);
+    if (lineTotal != null && Number.isFinite(lineTotal)) total += lineTotal;
     const hintParts = [];
     if (item.company?.name) hintParts.push(`Brand: ${item.company.name}`);
     if (item.type) hintParts.push(`Category: ${item.type.toUpperCase()}`);
@@ -89,6 +103,7 @@ function renderCart(items) {
           </div>
         </div>
       </td>
+      <td>${formatCurrency(item.price, item.currency)}</td>
       <td>
         <input
           type="number"
@@ -99,12 +114,14 @@ function renderCart(items) {
           class="quantity-input"
         />
       </td>
+      <td>${formatCurrency(lineTotal, item.currency)}</td>
       <td><button class="link-button" data-remove="${item.id}">Remove</button></td>
     `;
     fragment.appendChild(row);
   });
 
   body.appendChild(fragment);
+  totalEl.textContent = formatCurrency(total, items[0]?.currency || "EGP");
 }
 
 async function loadCart() {

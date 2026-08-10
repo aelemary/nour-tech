@@ -39,6 +39,15 @@ function escapeHtml(value = "") {
     .replace(/"/g, "&quot;");
 }
 
+function formatPrice(price, currency = "EGP") {
+  if (price == null || !Number.isFinite(Number(price))) return "Contact for price";
+  return new Intl.NumberFormat("en-EG", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(Number(price));
+}
+
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, { credentials: "include", ...options });
   if (!res.ok) {
@@ -177,6 +186,7 @@ function createProductCard(product) {
       <span class="product-category">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
       <h3 class="product-title">${escapeHtml(product.title)}</h3>
       ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <strong class="product-price">${escapeHtml(formatPrice(product.price, product.currency))}</strong>
       <span class="product-card-action">View product</span>
     </div>
   `;
@@ -199,9 +209,7 @@ function setMerchandisingImages(products) {
     products.find((product) => normalizeCategory(product.type) === "laptop");
   const gpu = products.find((product) => normalizeCategory(product.type) === "gpu");
   const mappings = [
-    ["hero-laptop-image", laptop],
     ["category-laptop-image", laptop],
-    ["hero-gpu-image", gpu],
     ["category-gpu-image", gpu],
   ];
   mappings.forEach(([id, product]) => {

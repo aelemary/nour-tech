@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="/styles.css" />
     <link rel="icon" type="image/png" href="/data/nourtechsmall.png" />
   </head>
-  <body>
+  <body class="admin-page">
     <header>
       <a class="logo" href="/" aria-label="Nour Tech home">
         <img src="/data/nourtechlogo.png" alt="Nour Tech logo" class="logo-mark" />
@@ -34,10 +34,11 @@
     </header>
 
     <main>
-      <section class="panel">
+      <section class="panel admin-hero">
+        <p class="store-eyebrow">Nour Tech control center</p>
         <h1>Operations Dashboard</h1>
-        <p style="color: var(--text-muted); max-width: 720px;">
-          Manage brands, publish products, and monitor customer orders from Supabase.
+        <p>
+          Publish products, manage pricing, and keep every customer order moving from one clear workspace.
         </p>
         <div class="stats-grid" id="admin-stats">
           <div class="stat-card">
@@ -120,6 +121,11 @@
                 placeholder="Legion 7i RTX 4080"
                 maxlength="80"
               />
+            </label>
+            <label>
+              Price (EGP)
+              <input type="number" name="price" min="0" step="1" placeholder="45000" required />
+              <span class="field-hint">Shown across the storefront, cart, checkout, and order records.</span>
             </label>
             <label class="laptop-only">
               GPU
@@ -207,6 +213,7 @@
                 <thead>
                   <tr>
                     <th>Listing</th>
+                    <th>Price</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -329,13 +336,14 @@
         </p>
         <p>
           <strong>Email:</strong>
-          <a href="mailto:support@nourtech.example" data-footer-contact-email>support@nourtech.example</a>
+          <a href="mailto:nourelemary28@gmail.com" data-footer-contact-email>nourelemary28@gmail.com</a>
         </p>
         <p><strong>Address:</strong> <span data-footer-contact="address">—</span></p>
       </div>
       <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.</p>
     </footer>
 
+    <script src="/store-shell.js" defer></script>
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
     <script src="/admin.js" defer></script>

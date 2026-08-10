@@ -38,7 +38,7 @@
         <h1>Your Cart</h1>
         <p style="color: var(--text-muted); max-width: 680px;">
           Review the products in your basket, adjust quantities, or remove items you no longer need. Continue
-          to checkout when you are ready to send your order request.
+          to checkout when you are ready to place your order.
         </p>
         <div id="cart-status" class="order-status"></div>
         <div id="cart-empty" class="empty-state">
@@ -50,13 +50,16 @@
               <thead>
                 <tr>
                   <th>Item</th>
+                  <th>Unit price</th>
                   <th>Qty</th>
+                  <th>Total</th>
                   <th>Remove</th>
                 </tr>
               </thead>
               <tbody id="cart-body"></tbody>
             </table>
           </div>
+          <div class="cart-summary"><span>Order total</span><strong id="cart-total">EGP 0</strong></div>
           <div class="btn-stack">
             <button class="btn btn-outline" id="clear-cart">Clear Cart</button>
             <button class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
@@ -115,13 +118,14 @@
         </p>
         <p>
           <strong>Email:</strong>
-          <a href="mailto:support@nourtech.example" data-footer-contact-email>support@nourtech.example</a>
+          <a href="mailto:nourelemary28@gmail.com" data-footer-contact-email>nourelemary28@gmail.com</a>
         </p>
         <p><strong>Address:</strong> <span data-footer-contact="address">—</span></p>
       </div>
       <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.</p>
     </footer>
 
+    <script src="/store-shell.js" defer></script>
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
     <script src="/cart.js" defer></script>

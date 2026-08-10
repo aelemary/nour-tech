@@ -324,6 +324,15 @@ function showStatus(message, type = "success") {
   }, 3000);
 }
 
+function formatPrice(price, currency = "EGP") {
+  if (price == null || !Number.isFinite(Number(price))) return "Contact us for price";
+  return new Intl.NumberFormat("en-EG", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(Number(price));
+}
+
 function renderProduct(product) {
   const layout = document.getElementById("detail-layout");
   const typeLabel = formatTypeLabel(product.type);
@@ -370,9 +379,10 @@ function renderProduct(product) {
       </section>
     </div>
     <aside class="panel detail-purchase">
-      <h2>Order Options</h2>
+      <p class="detail-price">${escapeHtml(formatPrice(product.price, product.currency))}</p>
+      <h2>Ready to buy?</h2>
       <p class="field-hint">
-        Submit your order details and our team will contact you to confirm availability.
+        Add it to your cart or check out now. We’ll confirm your order and delivery details with you.
       </p>
       <div class="btn-stack">
         <button class="btn btn-primary" data-buy-now="${product.id}">Buy Now</button>

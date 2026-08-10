@@ -30,7 +30,7 @@ Do not commit `.env` files or service-role keys. If a service key is exposed, ro
 
 Products are stored in one `products` table and differentiated by `type`. Shared listing fields live directly on the product, while flexible manual, Icecat, and imported specifications live in `specs_raw` as JSONB. Brands, users, contact details, orders, and order items use their own tables.
 
-The storefront intentionally does not store or display product prices. Orders contain products and quantities, and the team confirms availability and commercial details with the customer after submission.
+The storefront displays prices in EGP. Orders retain each product's unit price at the time of submission, while the team confirms availability and delivery details with the customer after submission.
 
 ## Development
 

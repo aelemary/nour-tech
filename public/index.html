@@ -58,19 +58,55 @@
 
     <main class="storefront-main">
       <section class="store-hero" aria-labelledby="store-hero-title">
-        <div class="store-hero-copy">
-          <p class="store-eyebrow">Nour Tech</p>
-          <h1 id="store-hero-title">Upgrade the way you work and play.</h1>
-          <p>Explore capable laptops and desktop graphics cards with the specifications you need to choose confidently.</p>
-          <div class="store-hero-actions">
-            <a class="store-button store-button-light" href="/category.html?type=laptop">Shop laptops</a>
-            <a class="store-button store-button-outline" href="/category.html?type=gpu">Shop graphics cards</a>
+        <div class="hero-slide is-active" data-hero-slide aria-hidden="false">
+          <div class="store-hero-copy">
+            <p class="store-eyebrow">Nour Tech</p>
+            <h1 id="store-hero-title">Power your passion.<br /><span>Upgrade</span> your world.</h1>
+            <p>High-performance laptops and graphics cards built for gamers, creators, and professionals.</p>
+            <div class="store-hero-actions">
+              <a class="store-button store-button-light" href="/category.html?type=laptop">Shop laptops</a>
+              <a class="store-button store-button-outline" href="/category.html?type=gpu">Shop graphics cards</a>
+            </div>
           </div>
+          <div class="hero-scene" aria-hidden="true"><img src="/hero-hardware-studio.png" alt="" /></div>
         </div>
-        <div class="store-hero-products" aria-hidden="true">
-          <div class="hero-product hero-product-laptop"><img id="hero-laptop-image" alt="" /></div>
-          <div class="hero-product hero-product-gpu"><img id="hero-gpu-image" alt="" /></div>
+
+        <div class="hero-slide" data-hero-slide aria-hidden="true" hidden>
+          <div class="store-hero-copy">
+            <p class="store-eyebrow">Laptop performance</p>
+            <h2>Built to move with your ambition.</h2>
+            <p>From study and work to play, find powerful laptops with the specifications you need at our lowest prices.</p>
+            <div class="store-hero-actions"><a class="store-button store-button-light" href="/category.html?type=laptop">Shop laptops</a></div>
+          </div>
+          <div class="hero-scene" aria-hidden="true"><img src="/hero-laptop-studio.png" alt="" /></div>
         </div>
+
+        <div class="hero-slide" data-hero-slide aria-hidden="true" hidden>
+          <div class="store-hero-copy">
+            <p class="store-eyebrow">Graphics power</p>
+            <h2>Every frame, turned all the way up.</h2>
+            <p>Shop graphics cards for smoother gaming and faster creation, backed by expert guidance and our lowest prices.</p>
+            <div class="store-hero-actions"><a class="store-button store-button-light" href="/category.html?type=gpu">Shop graphics cards</a></div>
+          </div>
+          <div class="hero-scene" aria-hidden="true"><img src="/hero-gpu-studio.png" alt="" /></div>
+        </div>
+
+        <div class="hero-carousel-controls" aria-label="Hero slides">
+          <button type="button" class="hero-arrow" data-hero-prev aria-label="Previous slide">‹</button>
+          <div class="hero-dots" role="tablist" aria-label="Choose hero slide">
+            <button type="button" class="is-active" data-hero-dot="0" role="tab" aria-selected="true" aria-label="Show combined hardware slide"></button>
+            <button type="button" data-hero-dot="1" role="tab" aria-selected="false" aria-label="Show laptop slide"></button>
+            <button type="button" data-hero-dot="2" role="tab" aria-selected="false" aria-label="Show graphics card slide"></button>
+          </div>
+          <button type="button" class="hero-arrow" data-hero-next aria-label="Next slide">›</button>
+        </div>
+      </section>
+
+      <section class="store-trust-strip" aria-label="Nour Tech guarantees">
+        <div><span aria-hidden="true">✓</span><p><strong>100% authentic</strong><small>Original products you can trust</small></p></div>
+        <div><span aria-hidden="true">★</span><p><strong>Best prices</strong><small>Competitive value every day</small></p></div>
+        <div><span aria-hidden="true">↗</span><p><strong>Fast delivery</strong><small>Quick and secure dispatch</small></p></div>
+        <div><span class="support-icon" aria-hidden="true"></span><p><strong>Expert support</strong><small>Helpful guidance when you need it</small></p></div>
       </section>
 
       <section class="store-category-strip" aria-label="Shop by category">
@@ -131,7 +167,7 @@
         <div class="footer-contact">
           <p><strong>Sales Hotline</strong><span data-footer-contact="salesHotline">—</span></p>
           <p><strong>WhatsApp</strong><a href="#" id="footer-whatsapp-text-link" target="_blank" rel="noopener noreferrer"><span data-footer-contact="whatsapp">—</span></a></p>
-          <p><strong>Email</strong><a href="mailto:support@nourtech.example" data-footer-contact-email>support@nourtech.example</a></p>
+          <p><strong>Email</strong><a href="mailto:nourelemary28@gmail.com" data-footer-contact-email>nourelemary28@gmail.com</a></p>
           <p><strong>Address</strong><span data-footer-contact="address">—</span></p>
         </div>
       </div>
@@ -146,6 +182,7 @@
 
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
+    <script src="/hero-carousel.js" defer></script>
     <script src="/main.js" defer></script>
     <script src="/footer.js" defer></script>
     <script src="/nav.js" defer></script>

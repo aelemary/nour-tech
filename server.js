@@ -705,6 +705,8 @@ function mapProduct(record, type) {
     companyId: record.brand_id,
     shortName: record.short_name || "",
     title: record.title,
+    price: record.price == null ? null : Number(record.price),
+    currency: "EGP",
     description: record.description || "",
     images: Array.isArray(record.images) ? record.images : record.images ? [record.images] : [],
     warranty: record.warranty != null ? Number(record.warranty) : 0,
@@ -799,10 +801,10 @@ async function fetchContact() {
     ? await sbOld("contact", { params: { select: "*", id: "eq.1" } })
     : await sb("contact", { params: { select: "*", id: "eq.1" } });
   return data?.[0] || {
-    sales_hotline: "+20 100 000 0000",
-    whatsapp: "+20 100 000 0001",
-    support_email: "support@nourtech.example",
-    address: "Add your office or showroom address here",
+    sales_hotline: "01034898787",
+    whatsapp: "01034898787",
+    support_email: "nourelemary28@gmail.com",
+    address: "القاهرة",
     availability: [],
   };
 }
@@ -811,7 +813,7 @@ async function fetchProducts({ ids = [], category = "", companyId = "" } = {}) {
   const normalizedCategory = normalizeProductType(category);
   const params = {
     select:
-      "id,type,brand_id,title,short_name,description,images,warranty,specs_raw,created_at,brands(*)",
+      "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
     order: "title.asc",
   };
   if (ids.length) {
@@ -840,6 +842,8 @@ async function hydrateOrders(records = []) {
     const items = (order.order_items || []).map((item) => ({
       productId: item.product_id,
       quantity: item.quantity || 1,
+      unitPrice:
+        item.unit_price == null ? productMap.get(item.product_id)?.price ?? null : Number(item.unit_price),
       product: productMap.get(item.product_id) || null,
     }));
     return mapOrder(order, items);
@@ -1061,8 +1065,12 @@ async function handleApi(req, res, pathname, searchParams) {
           if (!requireAuth(req, res, session, { admin: true })) return;
           const body = await parseBody(req);
           const incomingType = normalizeProductType(body?.category || body?.type || forcedCategory);
-          if (!body || !incomingType || !body.companyId || !body.title) {
-            reply(400, { error: "Missing category, companyId, or title" });
+          if (!body || !incomingType || !body.companyId || !body.title || body.price === "" || body.price == null) {
+            reply(400, { error: "Missing category, companyId, title, or price" });
+            return;
+          }
+          if (!Number.isFinite(Number(body.price)) || Number(body.price) < 0) {
+            reply(400, { error: "Price must be a valid non-negative number" });
             return;
           }
           const brands = await sb("brands", { params: { select: "id", id: `eq.${body.companyId}` } });
@@ -1128,6 +1136,7 @@ async function handleApi(req, res, pathname, searchParams) {
             brand_id: body.companyId,
             short_name: body.shortName || "",
             title: body.title,
+            price: Number(body.price),
             description: body.description || "",
             warranty: body.warranty != null ? Number(body.warranty) : 0,
             images,
@@ -1146,7 +1155,7 @@ async function handleApi(req, res, pathname, searchParams) {
           const hydrated = await sb("products", {
             params: {
               select:
-                "id,type,brand_id,title,short_name,description,images,warranty,specs_raw,created_at,brands(*)",
+                "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
               id: `eq.${productRecord.id}`,
             },
           });
@@ -1177,6 +1186,7 @@ async function handleApi(req, res, pathname, searchParams) {
             brand_id: body.companyId,
             short_name: body.shortName,
             title: body.title,
+            price: body.price != null && body.price !== "" ? Number(body.price) : undefined,
             description: body.description,
             warranty: body.warranty != null ? Number(body.warranty) : undefined,
             images: Array.isArray(body.images)
@@ -1185,6 +1195,10 @@ async function handleApi(req, res, pathname, searchParams) {
               ? body.images.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean)
               : undefined,
           };
+          if (payload.price !== undefined && (!Number.isFinite(payload.price) || payload.price < 0)) {
+            reply(400, { error: "Price must be a valid non-negative number" });
+            return;
+          }
           const rawSpecsInput = body.specsRaw ?? body.specs_raw;
           const hasSpecsRawInput = rawSpecsInput !== undefined;
           const manualRaw = body.manualSpecs;
@@ -1265,7 +1279,7 @@ async function handleApi(req, res, pathname, searchParams) {
           const hydrated = await sb("products", {
             params: {
               select:
-                "id,type,brand_id,title,short_name,description,images,warranty,specs_raw,created_at,brands(*)",
+                "id,type,brand_id,title,short_name,price,description,images,warranty,specs_raw,created_at,brands(*)",
               id: `eq.${slug}`,
             },
           });
@@ -1374,11 +1388,16 @@ async function handleApi(req, res, pathname, searchParams) {
             reply(500, { error: "Failed to create order" });
             return;
           }
-          const orderItemsPayload = items.map((item) => ({
-            order_id: orderRecord.id,
-            product_id: item.productId || item.id,
-            quantity: item.quantity != null ? Math.max(1, Number(item.quantity)) : 1,
-          }));
+          const productsById = new Map(products.map((product) => [product.id, product]));
+          const orderItemsPayload = items.map((item) => {
+            const productId = item.productId || item.id;
+            return {
+              order_id: orderRecord.id,
+              product_id: productId,
+              quantity: item.quantity != null ? Math.max(1, Number(item.quantity)) : 1,
+              unit_price: productsById.get(productId)?.price ?? null,
+            };
+          });
           await sb("order_items", {
             method: "POST",
             headers: { Prefer: "return=representation" },

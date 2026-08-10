@@ -38,7 +38,7 @@
         <h1>Checkout</h1>
         <p style="color: var(--text-muted); max-width: 720px;">
           Confirm the products you want and add your delivery details. Our team will
-          reach out within 12 working hours to finalise logistics and delivery windows.
+          reach out within 12 working hours to confirm delivery details.
         </p>
         <div id="checkout-status" class="order-status"></div>
         <div id="checkout-empty" class="empty-state">
@@ -48,6 +48,7 @@
           <div class="panel-lite">
             <h2>Order Summary</h2>
             <ul id="summary-list" class="summary-list"></ul>
+            <div class="cart-summary"><span>Total</span><strong id="checkout-total">EGP 0</strong></div>
           </div>
           <form id="checkout-form" class="order-form" autocomplete="on">
             <h2 style="margin: 0;">Delivery Details</h2>
@@ -138,13 +139,14 @@
         </p>
         <p>
           <strong>Email:</strong>
-          <a href="mailto:support@nourtech.example" data-footer-contact-email>support@nourtech.example</a>
+          <a href="mailto:nourelemary28@gmail.com" data-footer-contact-email>nourelemary28@gmail.com</a>
         </p>
         <p><strong>Address:</strong> <span data-footer-contact="address">—</span></p>
       </div>
       <p class="footer-copy">Nour Tech &copy; <span id="year"></span>. Trusted hardware sourcing across MENA.</p>
     </footer>
 
+    <script src="/store-shell.js" defer></script>
     <script src="/auth.js" defer></script>
     <script src="/cart-storage.js" defer></script>
     <script src="/checkout.js" defer></script>

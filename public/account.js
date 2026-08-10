@@ -31,6 +31,15 @@ function showStatus(message, type = "info") {
     : "";
 }
 
+function formatCurrency(amount, currency = "EGP") {
+  if (amount == null || !Number.isFinite(Number(amount))) return "—";
+  return new Intl.NumberFormat("en-EG", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(Number(amount));
+}
+
 function renderOrders(orders) {
   const wrapper = document.getElementById("account-orders");
   const tbody = document.getElementById("account-orders-body");
@@ -56,6 +65,11 @@ function renderOrders(orders) {
       ? order.status.charAt(0).toUpperCase() + order.status.slice(1)
       : "";
     const quantityTotal = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const pricedItems = items.filter((item) => Number.isFinite(Number(item.unitPrice ?? item.product?.price)));
+    const orderTotal = pricedItems.reduce(
+      (sum, item) => sum + Number(item.unitPrice ?? item.product?.price) * (item.quantity || 1),
+      0
+    );
     const itemCountLabel = items.length > 1 ? ` +${items.length - 1} more` : "";
     row.innerHTML = `
       <td>${order.id}</td>
@@ -68,6 +82,7 @@ function renderOrders(orders) {
         ${firstItem?.product ? "" : '<div class="field-hint">No longer available</div>'}
       </td>
       <td>${quantityTotal || 1}</td>
+      <td>${pricedItems.length === items.length ? formatCurrency(orderTotal) : "Price on request"}</td>
       <td><span class="status-pill ${order.status}">${statusLabel}</span></td>
     `;
     fragment.appendChild(row);

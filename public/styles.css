@@ -2219,6 +2219,305 @@ footer.store-footer {
   padding: 1.4rem 0 3rem !important;
 }
 
+/* Shared storefront treatment for account, checkout, support, and admin pages. */
+.storefront-page:not(.page-main):not(.page-detail) {
+  background: #f5f8fb;
+}
+
+.storefront-page:not(.page-main):not(.page-detail) main {
+  width: min(100% - 2rem, 1180px);
+  margin: 0 auto;
+  padding: 2rem 0 3.5rem;
+}
+
+.storefront-page:not(.page-main):not(.page-detail) .panel {
+  border-radius: 4px;
+  box-shadow: 0 12px 28px rgba(16, 47, 75, 0.08);
+}
+
+.storefront-page:not(.page-main):not(.page-detail) .panel > h1 {
+  color: #102f4b;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+}
+
+.product-price,
+.detail-price {
+  display: block;
+  margin: 0.15rem 0 0;
+  color: #075fc7;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.detail-price {
+  font-size: 1.45rem;
+}
+
+.summary-list small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #075fc7;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.admin-page .admin-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.8rem, 4vw, 3rem);
+  color: #fff;
+  background: linear-gradient(115deg, #0e2033, #17426c 62%, #1c7ec5);
+  border: 0;
+}
+
+.admin-page .admin-hero::after {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  right: -80px;
+  top: -130px;
+  border: 44px solid rgba(255, 255, 255, 0.09);
+  border-radius: 50%;
+}
+
+.admin-page .admin-hero h1,
+.admin-page .admin-hero > p:not(.store-eyebrow) {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+}
+
+.admin-page .admin-hero > p:not(.store-eyebrow) {
+  max-width: 630px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-page .stat-card {
+  position: relative;
+  z-index: 1;
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: none;
+}
+
+/* The home page stays intact except for the refreshed banner and guarantees. */
+.store-hero {
+  min-height: 460px;
+  background:
+    linear-gradient(90deg, rgba(247, 251, 255, 0.98) 0%, rgba(247, 251, 255, 0.9) 49%, rgba(230, 241, 250, 0.26) 100%),
+    radial-gradient(circle at 84% 25%, rgba(28, 126, 197, 0.16), transparent 32%),
+    #edf4fa;
+  color: #0b2743;
+}
+
+.store-hero::after {
+  border-color: rgba(7, 95, 199, 0.08);
+}
+
+.store-hero h1 {
+  max-width: 650px;
+  color: #0b2743;
+  font-size: clamp(2.65rem, 5.2vw, 5rem);
+}
+
+.store-hero h1 span {
+  color: #0864d8;
+}
+
+.store-hero-copy > p:not(.store-eyebrow) {
+  color: #526b83;
+  font-size: 1rem;
+}
+
+.store-button-light {
+  background: #0864d8;
+  border-color: #0864d8;
+  color: #fff;
+}
+
+.store-button-outline {
+  border-color: #0864d8;
+  color: #0757b8;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.hero-product {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.hero-product img {
+  padding: 0;
+  filter: drop-shadow(0 22px 18px rgba(14, 32, 51, 0.2));
+}
+
+.store-hero-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.hero-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(247, 251, 255, 0.98) 0%, rgba(247, 251, 255, 0.84) 42%, rgba(247, 251, 255, 0.08) 68%);
+}
+
+.hero-scene img {
+  position: absolute;
+  top: 50%;
+  right: 1.2rem;
+  width: auto;
+  max-width: 72%;
+  height: 84%;
+  object-fit: cover;
+  object-position: right center;
+  transform: translateY(-50%);
+}
+
+.store-trust-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 1.4rem 0;
+  border-bottom: 1px solid #dce7ef;
+}
+
+.store-trust-strip > div {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 1.25rem;
+  border-right: 1px solid #dce7ef;
+}
+
+.store-trust-strip > div:last-child {
+  border-right: 0;
+}
+
+.store-trust-strip > div > span {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  border: 2px solid #0864d8;
+  border-radius: 50%;
+  color: #0864d8;
+  font-weight: 800;
+}
+
+.store-trust-strip > div > .support-icon {
+  position: relative;
+  border: 0;
+  border-radius: 0;
+}
+
+.support-icon::before {
+  content: "";
+  position: absolute;
+  top: 0.35rem;
+  left: 0.3rem;
+  width: 1.45rem;
+  height: 1.2rem;
+  border: 2px solid #0864d8;
+  border-bottom: 0;
+  border-radius: 1rem 1rem 0 0;
+}
+
+.support-icon::after {
+  content: "";
+  position: absolute;
+  top: 1.2rem;
+  left: 0.22rem;
+  width: 0.28rem;
+  height: 0.58rem;
+  border-radius: 0.2rem;
+  background: #0864d8;
+  box-shadow: 1.52rem 0 #0864d8;
+}
+
+.store-trust-strip p {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+}
+
+.store-trust-strip strong {
+  color: #102f4b;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.store-trust-strip small {
+  color: #60758a;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 760px) {
+  .storefront-page:not(.page-main):not(.page-detail) main {
+    width: min(100% - 1rem, 1180px);
+    padding-top: 1rem;
+  }
+
+  .store-hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    padding: 2rem 1.25rem 1.4rem;
+  }
+
+  .store-hero-products {
+    min-height: 190px;
+  }
+
+  .hero-scene img {
+    top: auto;
+    right: 0;
+    bottom: 0.35rem;
+    max-width: 92%;
+    height: 44%;
+    object-position: right center;
+    transform: none;
+  }
+
+  .hero-product-laptop {
+    width: min(88%, 350px);
+    height: 185px;
+  }
+
+  .hero-product-gpu {
+    width: min(48%, 195px);
+    height: 105px;
+  }
+
+  .store-trust-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.65rem 0;
+  }
+
+  .store-trust-strip > div {
+    padding: 0.8rem;
+  }
+
+  .store-trust-strip > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .store-trust-strip > div:nth-child(-n + 2) {
+    border-bottom: 1px solid #dce7ef;
+  }
+}
+
 .store-catalog-page .panel {
   margin-bottom: 1rem;
   border-radius: 2px;
@@ -2985,5 +3284,237 @@ footer.store-footer {
 
   .spec-toggle-bottom {
     min-height: 40px;
+  }
+}
+
+/* Three-slide hero carousel. */
+.store-hero {
+  display: block;
+  min-height: 460px;
+  padding: 0;
+}
+
+.hero-slide {
+  position: relative;
+  min-height: 460px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+  align-items: center;
+  padding: clamp(2rem, 5vw, 4.5rem);
+  overflow: hidden;
+}
+
+.hero-slide[hidden] {
+  display: none;
+}
+
+.hero-slide.is-active {
+  animation: hero-slide-in 520ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes hero-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide.is-active {
+    animation: none;
+  }
+}
+
+.hero-slide h1,
+.hero-slide h2 {
+  max-width: 650px;
+  margin: 0;
+  color: #0b2743;
+  font-size: clamp(2.65rem, 5.2vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.hero-carousel-controls {
+  position: absolute;
+  z-index: 3;
+  right: 1.25rem;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hero-arrow,
+.hero-dots button {
+  border: 1px solid rgba(7, 95, 199, 0.32);
+  background: rgba(255, 255, 255, 0.9);
+  color: #0757b8;
+  cursor: pointer;
+}
+
+.hero-arrow {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.hero-arrow:hover,
+.hero-arrow:focus-visible {
+  background: #0864d8;
+  color: #fff;
+}
+
+.hero-dots {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.hero-dots button {
+  width: 0.6rem;
+  height: 0.6rem;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.hero-dots button.is-active {
+  width: 1.5rem;
+  border-radius: 999px;
+  background: #0864d8;
+}
+
+@media (max-width: 900px) {
+  .hero-slide {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
+    padding: 2.5rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .store-hero,
+  .hero-slide {
+    min-height: 310px;
+  }
+
+  .hero-slide {
+    grid-template-columns: 1fr;
+    align-content: start;
+    padding: 1.6rem 1.25rem;
+  }
+
+  .hero-slide h1,
+  .hero-slide h2 {
+    max-width: 310px;
+    font-size: clamp(1.75rem, 8vw, 2.35rem);
+  }
+
+  .hero-slide .store-hero-copy > p:not(.store-eyebrow) {
+    max-width: 330px;
+    margin: 0.75rem 0 1rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  .hero-carousel-controls {
+    right: 0.75rem;
+    bottom: 0.65rem;
+  }
+
+  .hero-arrow {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+}
+
+/* The studio artwork fills the hero's visual field, rather than reading as a
+   separate image card.  Its full canvas remains visible on every slide. */
+.store-hero {
+  min-height: clamp(35rem, 40vw, 41rem);
+  overflow: hidden;
+  background: #f7fbff;
+}
+
+.store-hero::after {
+  content: none;
+}
+
+.hero-slide {
+  min-height: clamp(35rem, 40vw, 41rem);
+  grid-template-columns: minmax(0, 1.35fr) minmax(19rem, 0.65fr);
+  padding: clamp(2.5rem, 4vw, 4.5rem);
+}
+
+.hero-slide h1,
+.hero-slide h2 {
+  max-width: 46rem;
+  font-size: clamp(2.45rem, 4.05vw, 4.15rem);
+  line-height: 1.04;
+}
+
+.hero-scene {
+  display: block;
+  padding: 0;
+  pointer-events: none;
+  background: #f7fbff;
+}
+
+.hero-scene::after {
+  z-index: 1;
+  background:
+    linear-gradient(90deg, #f7fbff 0%, rgba(247, 251, 255, 0.94) 34%, rgba(247, 251, 255, 0.38) 52%, rgba(247, 251, 255, 0) 72%),
+    linear-gradient(0deg, rgba(247, 251, 255, 0.18), rgba(247, 251, 255, 0));
+}
+
+.hero-scene img {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: auto;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
+  object-position: right center;
+  transform: translateY(-50%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 16%, #000 38%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 16%, #000 38%);
+}
+
+.hero-slide .store-hero-copy {
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 760px) {
+  .store-hero,
+  .hero-slide {
+    min-height: 35rem;
+  }
+
+  .hero-slide {
+    grid-template-columns: 1fr;
+    padding: 2rem 1.25rem 8.5rem;
+  }
+
+  .hero-slide h1,
+  .hero-slide h2 {
+    max-width: 20rem;
+    font-size: clamp(2rem, 9vw, 2.7rem);
+  }
+
+  .hero-scene img {
+    right: -10rem;
+    height: 50%;
+    top: auto;
+    bottom: 0;
+    transform: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 22%, #000 48%);
+    mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 22%, #000 48%);
   }
 }

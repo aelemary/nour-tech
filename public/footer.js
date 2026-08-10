@@ -9,7 +9,8 @@ async function fetchFooterJSON(url, options = {}) {
 }
 
 function normalizePhoneForWhatsApp(value = "") {
-  return String(value || "").replace(/[^\d]/g, "");
+  const digits = String(value || "").replace(/[^\d]/g, "");
+  return digits.startsWith("0") ? `20${digits.slice(1)}` : digits;
 }
 
 function setFooterYear() {
@@ -27,7 +28,7 @@ function populateFooterContact(contact = {}) {
 
   const emailNode = document.querySelector("[data-footer-contact-email]");
   if (emailNode) {
-    const email = contact.supportEmail || "support@nourtech.example";
+    const email = contact.supportEmail || "nourelemary28@gmail.com";
     emailNode.textContent = email;
     emailNode.href = `mailto:${email}`;
   }

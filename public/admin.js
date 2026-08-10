@@ -79,6 +79,15 @@ function setYear() {
   }
 }
 
+function formatCurrency(amount, currency = "EGP") {
+  if (amount == null || !Number.isFinite(Number(amount))) return "—";
+  return new Intl.NumberFormat("en-EG", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(Number(amount));
+}
+
 function showStatus(containerId, message, type = "success") {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -231,6 +240,8 @@ function startEditingProduct(productId) {
   form.querySelector('input[name="title"]').value = product.title || "";
   const shortNameInput = form.querySelector('input[name="shortName"]');
   if (shortNameInput) shortNameInput.value = product.shortName || "";
+  const priceInput = form.querySelector('input[name="price"]');
+  if (priceInput) priceInput.value = product.price ?? "";
   form.querySelector('input[name="gpu"]').value = product.gpu || "";
   form.querySelector('input[name="cpu"]').value = product.cpu || "";
   form.querySelector('input[name="ram"]').value = product.ram || "";
@@ -333,7 +344,8 @@ function renderOrders(orders) {
         const product = item.product;
         const quantity = item.quantity || 1;
         if (!product) return `<div>Product removed <span class="field-hint">×${quantity}</span></div>`;
-        return `<div>${product.title} <span class="field-hint">×${quantity}</span></div>`;
+        const unitPrice = item.unitPrice ?? product.price;
+        return `<div>${product.title} <span class="field-hint">×${quantity} • ${formatCurrency(unitPrice, product.currency)}</span></div>`;
       })
       .join("");
     const statusLabel = getStatusLabel(order.status);
@@ -431,6 +443,7 @@ function renderCatalog() {
       <td><strong>${product.title}</strong><div class="field-hint">${company ? company.name : "—"} • ${typeLabel}</div>${
         warrantyLabel ? `<div class="field-hint">${warrantyLabel}</div>` : ""
       }</td>
+      <td>${formatCurrency(product.price, product.currency)}</td>
       <td>
         <button class="link-button" data-edit-product="${product.id}">Edit</button>
         <button class="link-button" data-delete-product="${product.id}">Remove</button>
@@ -805,6 +818,11 @@ async function handleProductSubmit(event) {
   delete payload.id;
   payload.shortName = payload.shortName ? payload.shortName.trim() : "";
   payload.category = payload.category ? payload.category.trim().toLowerCase() : "";
+  payload.price = Number(payload.price);
+  if (!Number.isFinite(payload.price) || payload.price < 0) {
+    showStatus("product-status", "Enter a valid non-negative price in EGP.", "error");
+    return;
+  }
   if (payload.warranty !== undefined && payload.warranty !== "") {
     payload.warranty = Number(payload.warranty);
   } else {

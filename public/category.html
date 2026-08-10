@@ -47,54 +47,8 @@
         <a class="back-link" href="/index.html">Back to catalog</a>
         <h1 id="category-title">Catalog Search</h1>
         <p class="inventory-subtitle" id="category-subtitle">
-          Refine products by keyword, brand, category, and visible specification text.
+          Search the catalog from the box above to find the hardware you need.
         </p>
-      </section>
-
-      <section class="panel category-filter-panel">
-        <details id="filter-disclosure" class="filter-disclosure" open>
-          <summary>Advanced filters <span>Search by brand and specifications</span></summary>
-          <div class="filter-disclosure-content">
-            <h2>Filters</h2>
-            <form id="category-filter-form" class="filters-form">
-          <label>
-            Keywords
-            <input type="search" id="filter-search" name="search" placeholder="Title, brand, or specs" />
-          </label>
-          <label>
-            Category
-            <select id="filter-category" name="category"><option value="">Laptops &amp; GPUs</option></select>
-          </label>
-          <label>
-            Brand
-            <select id="filter-company" name="companyId">
-              <option value="">Any brand</option>
-            </select>
-          </label>
-          <label>
-            CPU
-            <input type="text" name="cpu" placeholder="Intel, Ryzen, Ultra..." />
-          </label>
-          <label>
-            GPU
-            <input type="text" name="gpu" placeholder="RTX, Radeon, Intel..." />
-          </label>
-          <label>
-            RAM / Memory
-            <input type="text" name="ram" placeholder="16GB, DDR5..." />
-          </label>
-          <label>
-            Storage / Capacity
-            <input type="text" name="storage" placeholder="1TB, NVMe, SATA..." />
-          </label>
-              <div class="filter-actions">
-                <button type="submit" class="btn btn-primary">Apply Filters</button>
-                <button type="button" class="btn btn-outline" id="filter-reset">Reset</button>
-              </div>
-            </form>
-            <div id="category-status" class="order-status"></div>
-          </div>
-        </details>
       </section>
 
       <section class="panel category-results-panel">
@@ -103,7 +57,7 @@
           <span id="result-context"></span>
         </div>
         <div id="category-results" class="catalog-grid category-results-grid"></div>
-        <div id="category-empty" class="empty-state" hidden>Nothing matched those filters.</div>
+        <div id="category-empty" class="empty-state" hidden>Nothing matched your search.</div>
       </section>
     </main>
 

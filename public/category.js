@@ -65,9 +65,11 @@ function setupHeaderSearch() {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const search = String(new FormData(form).get("search") || "").trim();
-    const input = document.getElementById("filter-search");
-    if (input) input.value = search;
-    renderProducts();
+    const url = new URL("/category.html", window.location.origin);
+    const currentType = new URLSearchParams(window.location.search).get("type");
+    if (currentType) url.searchParams.set("type", currentType);
+    if (search) url.searchParams.set("search", search);
+    window.location.href = `${url.pathname}${url.search}`;
   });
 }
 
@@ -113,11 +115,12 @@ function productSummary(product) {
 }
 
 function readFilters() {
-  const form = document.getElementById("category-filter-form");
-  const data = form ? Object.fromEntries(new FormData(form).entries()) : {};
-  return Object.fromEntries(
-    Object.entries(data).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
-  );
+  const params = new URLSearchParams(window.location.search);
+  const type = String(params.get("type") || "").toLowerCase();
+  return {
+    category: STOREFRONT_CATEGORIES.includes(type) ? type : "",
+    search: String(params.get("search") || "").trim(),
+  };
 }
 
 function filterProducts(products, filters) {
@@ -125,14 +128,18 @@ function filterProducts(products, filters) {
   return products.filter((product) => {
     const type = String(product.type || "").toLowerCase();
     if (filters.category && type !== filters.category) return false;
-    if (filters.companyId && product.companyId !== filters.companyId) return false;
     if (search && !productText(product).includes(search)) return false;
-    if (!includesFieldOrProductText(product, product.cpu || product.description, filters.cpu?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.gpu || product.description, filters.gpu?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.ram || product.description, filters.ram?.toLowerCase())) return false;
-    if (!includesFieldOrProductText(product, product.storage || product.description, filters.storage?.toLowerCase())) return false;
     return true;
   });
+}
+
+function formatPrice(price, currency = "EGP") {
+  if (price == null || !Number.isFinite(Number(price))) return "Contact for price";
+  return new Intl.NumberFormat("en-EG", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(Number(price));
 }
 
 function populateCategorySelect(products = []) {
@@ -182,6 +189,7 @@ function createProductCard(product) {
       <span class="product-category">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
       <h3 class="product-title">${escapeHtml(product.title)}</h3>
       ${summary ? `<p class="product-summary">${escapeHtml(summary)}</p>` : ""}
+      <strong class="product-price">${escapeHtml(formatPrice(product.price, product.currency))}</strong>
       <span class="product-card-action">View product</span>
     </div>
   `;
@@ -205,8 +213,8 @@ function updateHead(filters, count) {
   if (title) title.textContent = categoryLabel || "Catalog Search";
   if (subtitle) {
     subtitle.textContent = categoryLabel
-      ? `Browse ${categoryLabel.toLowerCase()} with brand and specification filters.`
-      : "Refine products by keyword, brand, category, and visible specification text.";
+      ? `Browse available ${categoryLabel.toLowerCase()}.`
+      : "Browse available laptops and graphics cards.";
   }
   if (resultCount) resultCount.textContent = `${count} product${count === 1 ? "" : "s"}`;
   if (resultContext) resultContext.textContent = filters.search ? `Search: "${filters.search}"` : "";
@@ -236,11 +244,7 @@ function applyInitialParams() {
   const requestedType = String(params.get("type") || "").toLowerCase();
   const type = STOREFRONT_CATEGORIES.includes(requestedType) ? requestedType : "";
   const search = params.get("search") || "";
-  const categoryInput = document.getElementById("filter-category");
-  const searchInput = document.getElementById("filter-search");
   const headerInput = document.querySelector("#header-search input[name='search']");
-  if (categoryInput && type) categoryInput.value = type;
-  if (searchInput && search) searchInput.value = search;
   if (headerInput && search) headerInput.value = search;
 }
 
@@ -248,45 +252,20 @@ async function init() {
   setYear();
   updateCartCount();
   setupHeaderSearch();
-  const filterDisclosure = document.getElementById("filter-disclosure");
-  if (filterDisclosure && window.matchMedia("(max-width: 760px)").matches) {
-    filterDisclosure.removeAttribute("open");
-  }
-  const form = document.getElementById("category-filter-form");
-  const resetButton = document.getElementById("filter-reset");
   try {
-    const [categoryInventories, companies] = await Promise.all([
-      Promise.all(
-        STOREFRONT_CATEGORIES.map((type) => fetchJSON(`${API_BASE}/products?type=${encodeURIComponent(type)}`))
-      ),
-      fetchJSON(`${API_BASE}/companies`).catch(() => []),
-    ]);
+    const categoryInventories = await Promise.all(
+      STOREFRONT_CATEGORIES.map((type) => fetchJSON(`${API_BASE}/products?type=${encodeURIComponent(type)}`))
+    );
     const products = categoryInventories.flat();
     state.products = (products || []).filter((product) =>
       STOREFRONT_CATEGORIES.includes(String(product.type || "").trim().toLowerCase())
     );
-    const storefrontCompanyIds = new Set(state.products.map((product) => product.companyId).filter(Boolean));
-    state.companies = (companies || []).filter((company) => storefrontCompanyIds.has(company.id));
-    populateCategorySelect(state.products);
-    populateCompanySelect(state.companies);
     applyInitialParams();
     renderProducts();
   } catch (error) {
     console.error(error);
-    const status = document.getElementById("category-status");
-    if (status) status.innerHTML = `<div class="toast error">Could not load catalog data.</div>`;
-  }
-  if (form) {
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      renderProducts();
-    });
-  }
-  if (resetButton && form) {
-    resetButton.addEventListener("click", () => {
-      form.reset();
-      renderProducts();
-    });
+    const results = document.getElementById("category-results");
+    if (results) results.innerHTML = `<div class="toast error">Could not load catalog data.</div>`;
   }
 }
 
