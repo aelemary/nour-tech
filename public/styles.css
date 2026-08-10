@@ -3512,7 +3512,7 @@ footer.store-footer {
   .hero-slide h1,
   .hero-slide h2 {
     max-width: 100%;
-    font-size: clamp(1.45rem, 6.5vw, 1.75rem);
+    font-size: clamp(1.3rem, 6vw, 1.6rem);
     line-height: 1.04;
   }
 
