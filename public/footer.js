@@ -20,6 +20,18 @@ function setFooterYear() {
   }
 }
 
+function loadVercelAnalytics() {
+  const localHosts = new Set(["localhost", "127.0.0.1"]);
+  if (localHosts.has(window.location.hostname)) return;
+  if (document.querySelector('script[data-vercel-analytics]')) return;
+
+  const script = document.createElement("script");
+  script.defer = true;
+  script.src = "/_vercel/insights/script.js";
+  script.dataset.vercelAnalytics = "true";
+  document.head.appendChild(script);
+}
+
 function populateFooterContact(contact = {}) {
   document.querySelectorAll("[data-footer-contact]").forEach((node) => {
     const field = node.getAttribute("data-footer-contact");
@@ -58,6 +70,7 @@ function populateFooterContact(contact = {}) {
 
 async function initFooter() {
   setFooterYear();
+  loadVercelAnalytics();
   try {
     const contact = await fetchFooterJSON(`${FOOTER_API_BASE}/contact`);
     populateFooterContact(contact || {});
