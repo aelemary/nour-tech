@@ -3494,40 +3494,64 @@ footer.store-footer {
 @media (max-width: 760px) {
   .store-hero,
   .hero-slide {
-    min-height: 39rem;
+    min-height: 16rem;
   }
 
   .hero-slide {
     grid-template-columns: 1fr;
-    padding: 1.75rem 1.2rem 17rem;
+    align-content: center;
+    padding: 0.5rem 1.1rem 2.25rem;
+  }
+
+  .hero-slide .store-hero-copy {
+    width: 47%;
+    max-width: 10.5rem;
+    transform: translateY(0.6rem);
   }
 
   .hero-slide h1,
   .hero-slide h2 {
-    max-width: 18rem;
-    font-size: clamp(2.15rem, 9.5vw, 2.7rem);
-    line-height: 1.06;
+    max-width: 100%;
+    font-size: clamp(1.45rem, 6.5vw, 1.75rem);
+    line-height: 1.04;
+  }
+
+  .hero-slide .store-eyebrow {
+    margin-bottom: 0.3rem;
+    font-size: 0.55rem;
   }
 
   .hero-slide .store-hero-copy > p:not(.store-eyebrow) {
-    max-width: 18rem;
-    margin: 0.85rem 0 1.1rem;
-    font-size: 0.85rem;
-    line-height: 1.5;
+    max-width: 100%;
+    margin: 0.45rem 0 0.65rem;
+    font-size: 0.67rem;
+    line-height: 1.35;
   }
 
   .hero-slide .store-hero-actions {
+    align-items: flex-start;
+    flex-direction: column;
     gap: 0.5rem;
   }
 
+  .hero-slide .store-button {
+    min-height: 29px;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.5rem;
+  }
+
   .hero-scene img {
-    right: -1.2rem;
-    width: calc(100% + 2.4rem);
+    right: 0;
+    width: 100%;
     height: auto;
-    top: auto;
-    bottom: 0.5rem;
-    transform: none;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 18%, #000 42%);
-    mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 18%, #000 42%);
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .hero-scene::after {
+    background: linear-gradient(90deg, #f7fbff 0%, rgba(247, 251, 255, 0.95) 46%, rgba(247, 251, 255, 0) 63%);
   }
 }
