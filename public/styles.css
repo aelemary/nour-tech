@@ -3494,27 +3494,40 @@ footer.store-footer {
 @media (max-width: 760px) {
   .store-hero,
   .hero-slide {
-    min-height: 35rem;
+    min-height: 39rem;
   }
 
   .hero-slide {
     grid-template-columns: 1fr;
-    padding: 2rem 1.25rem 8.5rem;
+    padding: 1.75rem 1.2rem 17rem;
   }
 
   .hero-slide h1,
   .hero-slide h2 {
-    max-width: 20rem;
-    font-size: clamp(2rem, 9vw, 2.7rem);
+    max-width: 18rem;
+    font-size: clamp(2.15rem, 9.5vw, 2.7rem);
+    line-height: 1.06;
+  }
+
+  .hero-slide .store-hero-copy > p:not(.store-eyebrow) {
+    max-width: 18rem;
+    margin: 0.85rem 0 1.1rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .hero-slide .store-hero-actions {
+    gap: 0.5rem;
   }
 
   .hero-scene img {
-    right: -10rem;
-    height: 50%;
+    right: -1.2rem;
+    width: calc(100% + 2.4rem);
+    height: auto;
     top: auto;
-    bottom: 0;
+    bottom: 0.5rem;
     transform: none;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 22%, #000 48%);
-    mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 22%, #000 48%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 18%, #000 42%);
+    mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 18%, #000 42%);
   }
 }
