@@ -66,9 +66,10 @@ function setupHeaderSearch() {
     event.preventDefault();
     const search = String(new FormData(form).get("search") || "").trim();
     const url = new URL("/category.html", window.location.origin);
-    const currentType = new URLSearchParams(window.location.search).get("type");
-    if (currentType) url.searchParams.set("type", currentType);
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.forEach((value, key) => url.searchParams.set(key, value));
     if (search) url.searchParams.set("search", search);
+    else url.searchParams.delete("search");
     window.location.href = `${url.pathname}${url.search}`;
   });
 }
@@ -120,7 +121,38 @@ function readFilters() {
   return {
     category: STOREFRONT_CATEGORIES.includes(type) ? type : "",
     search: String(params.get("search") || "").trim(),
+    models: params.getAll("model").filter(Boolean),
+    minPrice: String(params.get("minPrice") || ""),
+    maxPrice: String(params.get("maxPrice") || ""),
   };
+}
+
+function matchesPriceRange(product, minimum, maximum) {
+  const price = Number(product.price);
+  if ((!minimum && !maximum) || !Number.isFinite(price)) return !minimum && !maximum;
+  return (!minimum || price >= Number(minimum)) && (!maximum || price <= Number(maximum));
+}
+
+function modelSeries(product) {
+  const text = `${product.shortName || ""} ${product.title || ""}`.toLowerCase();
+  const series = [
+    ["rog strix", "ROG Strix"],
+    ["rog scar", "ROG SCAR"],
+    ["rog zephyrus", "ROG Zephyrus"],
+    ["tuf gaming", "TUF Gaming"],
+    ["victus", "Victus"],
+    ["legion", "Legion"],
+    ["loq", "LOQ"],
+    ["thinkpad", "ThinkPad"],
+    ["ideapad", "IdeaPad"],
+    ["macbook", "MacBook"],
+    ["rog astral", "ROG Astral"],
+    ["prime", "Prime"],
+    ["dual", "Dual"],
+  ];
+  const match = series.find(([needle]) => text.includes(needle));
+  if (match) return match[1];
+  return product.company?.name || "Other";
 }
 
 function filterProducts(products, filters) {
@@ -129,6 +161,8 @@ function filterProducts(products, filters) {
     const type = String(product.type || "").toLowerCase();
     if (filters.category && type !== filters.category) return false;
     if (search && !productText(product).includes(search)) return false;
+    if (filters.models.length && !filters.models.includes(modelSeries(product))) return false;
+    if (!matchesPriceRange(product, filters.minPrice, filters.maxPrice)) return false;
     return true;
   });
 }
@@ -142,36 +176,122 @@ function formatPrice(price, currency = "EGP") {
   }).format(Number(price));
 }
 
-function populateCategorySelect(products = []) {
-  const select = document.getElementById("filter-category");
-  if (!select) return;
-  const current = select.value;
-  const dynamicTypes = Array.from(
-    new Set(products.map((product) => String(product.type || "").trim().toLowerCase()).filter(Boolean))
-  );
-  const types = STOREFRONT_CATEGORIES.filter((type) => dynamicTypes.includes(type));
-  select.innerHTML = `<option value="">All categories</option>`;
-  types.forEach((type) => {
-    const option = document.createElement("option");
-    option.value = type;
-    option.textContent = formatCategoryLabel(type);
-    select.appendChild(option);
-  });
-  if (current && types.includes(current)) select.value = current;
+function categoryPriceBounds(filters) {
+  const prices = state.products
+    .filter((product) => !filters.category || String(product.type || "").toLowerCase() === filters.category)
+    .map((product) => Number(product.price))
+    .filter(Number.isFinite);
+  const lowest = prices.length ? Math.floor(Math.min(...prices) / 5000) * 5000 : 0;
+  const highest = prices.length ? Math.ceil(Math.max(...prices) / 5000) * 5000 : 200000;
+  return { minimum: Math.max(lowest, 0), maximum: Math.max(highest, 5000) };
 }
 
-function populateCompanySelect(companies = []) {
-  const select = document.getElementById("filter-company");
-  if (!select) return;
-  const current = select.value;
-  select.innerHTML = `<option value="">Any brand</option>`;
-  companies.forEach((company) => {
-    const option = document.createElement("option");
-    option.value = company.id;
-    option.textContent = company.name;
-    select.appendChild(option);
+function updatePriceRangeDisplay() {
+  const minRange = document.getElementById("filter-price-min");
+  const maxRange = document.getElementById("filter-price-max");
+  const track = document.getElementById("price-range-track");
+  const label = document.getElementById("price-range-label");
+  if (!minRange || !maxRange || !track || !label) return;
+  const minimum = Number(minRange.min);
+  const maximum = Number(maxRange.max);
+  const low = Number(minRange.value);
+  const high = Number(maxRange.value);
+  const start = ((low - minimum) / (maximum - minimum || 1)) * 100;
+  const end = ((high - minimum) / (maximum - minimum || 1)) * 100;
+  track.style.setProperty("--range-start", `${start}%`);
+  track.style.setProperty("--range-end", `${end}%`);
+  const anyRange = low <= minimum && high >= maximum;
+  label.textContent = anyRange ? "Any budget" : `${formatPrice(low)} – ${formatPrice(high)}`;
+  const minValue = document.getElementById("price-min-value");
+  const maxValue = document.getElementById("price-max-value");
+  if (minValue) minValue.textContent = formatPrice(low);
+  if (maxValue) maxValue.textContent = high >= maximum ? "Any price" : formatPrice(high);
+}
+
+function populateModelFilters(products, filters) {
+  const container = document.getElementById("filter-models");
+  if (!container) return;
+  const available = Array.from(new Set(products.map(modelSeries))).sort((a, b) => a.localeCompare(b));
+  container.innerHTML = "";
+  available.forEach((model) => {
+    const label = document.createElement("label");
+    label.className = "model-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.name = "model";
+    input.value = model;
+    input.checked = filters.models.includes(model);
+    const text = document.createElement("span");
+    text.textContent = model;
+    label.append(input, text);
+    container.appendChild(label);
   });
-  if (current && companies.some((company) => company.id === current)) select.value = current;
+}
+
+function syncFilterControls(filters) {
+  const minRange = document.getElementById("filter-price-min");
+  const maxRange = document.getElementById("filter-price-max");
+  if (!minRange || !maxRange) return;
+  const bounds = categoryPriceBounds(filters);
+  const selectedMin = Number(filters.minPrice);
+  const selectedMax = Number(filters.maxPrice);
+  const low = Number.isFinite(selectedMin) && filters.minPrice ? selectedMin : bounds.minimum;
+  const high = Number.isFinite(selectedMax) && filters.maxPrice ? selectedMax : bounds.maximum;
+  minRange.min = maxRange.min = String(bounds.minimum);
+  minRange.max = maxRange.max = String(bounds.maximum);
+  minRange.value = String(Math.min(low, high));
+  maxRange.value = String(Math.max(low, high));
+  updatePriceRangeDisplay();
+}
+
+function updateFilterUrl(updates = {}, models = []) {
+  const url = new URL(window.location.href);
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+  });
+  url.searchParams.delete("model");
+  models.forEach((model) => url.searchParams.append("model", model));
+  window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+}
+
+function setupFilters() {
+  const form = document.getElementById("catalog-filters");
+  if (!form) return;
+  const minRange = document.getElementById("filter-price-min");
+  const maxRange = document.getElementById("filter-price-max");
+  [minRange, maxRange].filter(Boolean).forEach((range) => {
+    range.addEventListener("input", () => {
+      const step = Number(range.step || 1);
+      if (range === minRange && Number(minRange.value) > Number(maxRange.value) - step) minRange.value = String(Number(maxRange.value) - step);
+      if (range === maxRange && Number(maxRange.value) < Number(minRange.value) + step) maxRange.value = String(Number(minRange.value) + step);
+      updatePriceRangeDisplay();
+    });
+  });
+  form.addEventListener("change", () => {
+    const bounds = categoryPriceBounds(readFilters());
+    const models = Array.from(form.querySelectorAll('input[name="model"]:checked'), (input) => input.value);
+    const low = Number(minRange.value);
+    const high = Number(maxRange.value);
+    updateFilterUrl({
+      minPrice: low > bounds.minimum ? low : "",
+      maxPrice: high < bounds.maximum ? high : "",
+      price: "",
+      cpu: "",
+      laptopGpu: "",
+      ram: "",
+      gpuFamily: "",
+      vram: "",
+    }, models);
+    syncFilterControls(readFilters());
+    renderProducts();
+  });
+  document.getElementById("clear-filters")?.addEventListener("click", () => {
+    updateFilterUrl({ minPrice: "", maxPrice: "", price: "", cpu: "", laptopGpu: "", ram: "", gpuFamily: "", vram: "" });
+    populateModelFilters(state.products.filter((product) => !readFilters().category || String(product.type || "").toLowerCase() === readFilters().category), readFilters());
+    syncFilterControls(readFilters());
+    renderProducts();
+  });
 }
 
 function createProductCard(product) {
@@ -217,7 +337,15 @@ function updateHead(filters, count) {
       : "Browse available laptops and graphics cards.";
   }
   if (resultCount) resultCount.textContent = `${count} product${count === 1 ? "" : "s"}`;
-  if (resultContext) resultContext.textContent = filters.search ? `Search: "${filters.search}"` : "";
+  const activeFilters = filters.models.length + [filters.minPrice, filters.maxPrice].filter(Boolean).length;
+  if (resultContext) {
+    resultContext.textContent = [
+      filters.search ? `Search: "${filters.search}"` : "",
+      activeFilters ? `${activeFilters} filter${activeFilters === 1 ? "" : "s"} applied` : "",
+    ].filter(Boolean).join(" • ");
+  }
+  const filterCount = document.getElementById("active-filter-count");
+  if (filterCount) filterCount.textContent = activeFilters ? `${activeFilters} active` : "All products";
   document.title = `Nour Tech | ${categoryLabel || "Catalog Search"}`;
 }
 
@@ -261,6 +389,13 @@ async function init() {
       STOREFRONT_CATEGORIES.includes(String(product.type || "").trim().toLowerCase())
     );
     applyInitialParams();
+    const filters = readFilters();
+    populateModelFilters(
+      state.products.filter((product) => !filters.category || String(product.type || "").toLowerCase() === filters.category),
+      filters
+    );
+    syncFilterControls(filters);
+    setupFilters();
     renderProducts();
   } catch (error) {
     console.error(error);

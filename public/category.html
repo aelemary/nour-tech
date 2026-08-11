@@ -47,18 +47,52 @@
         <a class="back-link" href="/index.html">Back to catalog</a>
         <h1 id="category-title">Catalog Search</h1>
         <p class="inventory-subtitle" id="category-subtitle">
-          Search the catalog from the box above to find the hardware you need.
+          Compare the hardware that fits your needs, then narrow the list by brand, budget, and key specs.
         </p>
       </section>
 
-      <section class="panel category-results-panel">
-        <div class="catalog-heading">
-          <h2 id="result-count">Products</h2>
-          <span id="result-context"></span>
-        </div>
-        <div id="category-results" class="catalog-grid category-results-grid"></div>
-        <div id="category-empty" class="empty-state" hidden>Nothing matched your search.</div>
-      </section>
+      <div class="catalog-page-layout">
+        <aside class="panel category-filter-panel" aria-labelledby="filter-title">
+          <details class="filter-disclosure" open>
+            <summary>
+              <strong id="filter-title">Filters</strong>
+              <span id="active-filter-count">All products</span>
+            </summary>
+            <div class="filter-disclosure-content">
+              <form id="catalog-filters" class="catalog-filters" aria-label="Product filters">
+                <div class="price-filter">
+                  <div class="price-filter-label">
+                    <label>Price range</label>
+                    <strong id="price-range-label">Any budget</strong>
+                  </div>
+                  <div class="price-range-control" aria-label="Price range">
+                    <div id="price-range-track" class="price-range-track"></div>
+                    <input id="filter-price-min" name="minPrice" type="range" min="0" max="200000" step="5000" value="0" aria-label="Minimum price" />
+                    <input id="filter-price-max" name="maxPrice" type="range" min="0" max="200000" step="5000" value="200000" aria-label="Maximum price" />
+                  </div>
+                  <div class="price-range-values"><span id="price-min-value">EGP 0</span><span id="price-max-value">Any price</span></div>
+                </div>
+                <fieldset class="model-filter">
+                  <legend>Model series</legend>
+                  <div id="filter-models" class="model-options"></div>
+                </fieldset>
+                <div class="catalog-filter-actions">
+                  <button type="button" id="clear-filters" class="filter-clear-button">Clear all</button>
+                </div>
+              </form>
+            </div>
+          </details>
+        </aside>
+
+        <section class="panel category-results-panel">
+          <div class="catalog-heading">
+            <h2 id="result-count">Products</h2>
+            <span id="result-context"></span>
+          </div>
+          <div id="category-results" class="catalog-grid category-results-grid"></div>
+          <div id="category-empty" class="empty-state" hidden>Nothing matched your search.</div>
+        </section>
+      </div>
     </main>
 
     <footer class="site-footer store-footer store-footer-compact">
