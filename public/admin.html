@@ -18,7 +18,7 @@
   <body class="admin-page">
     <header>
       <a class="logo" href="/" aria-label="Nour Tech home">
-        <img src="/data/nourtechlogo.png" alt="Nour Tech logo" class="logo-mark" />
+        <img src="/data/nour-tech-logo-transparent.png" alt="Nour Tech logo" class="logo-mark" />
       </a>
       <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">Menu</button>
       <nav id="site-nav">
@@ -33,7 +33,7 @@
       </nav>
     </header>
 
-    <main>
+    <main class="admin-main">
       <section class="panel admin-hero">
         <p class="store-eyebrow">Nour Tech control center</p>
         <h1>Operations Dashboard</h1>
@@ -56,9 +56,12 @@
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Catalog Management</h2>
-        <div class="admin-grid">
+      <section class="panel admin-section">
+        <div class="admin-section-heading">
+          <div><p class="store-eyebrow">Catalog</p><h2>Catalog Management</h2></div>
+          <p>Keep brands, prices, listings, and product details accurate from one structured workspace.</p>
+        </div>
+        <div class="admin-grid admin-catalog-grid">
           <form id="company-form" class="panel-lite">
             <h3>Add Brand</h3>
             <label>
@@ -201,12 +204,12 @@
             <div class="order-status" id="product-status"></div>
           </form>
         </div>
-        <div class="admin-grid" style="margin-top: 1.5rem;">
+        <div class="admin-grid admin-management-grid">
           <div class="panel-lite">
             <h3>Brands on File</h3>
             <ul id="company-list" class="chip-list"></ul>
           </div>
-          <div class="panel-lite" style="grid-column: span 2;">
+          <div class="panel-lite admin-catalog-table">
             <h3>Published Products</h3>
             <div class="table-scroll">
               <table class="orders-table catalog-table">
@@ -224,10 +227,13 @@
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Recent Orders</h2>
-        <div style="margin-bottom: 1rem;">
-          <label style="max-width: 240px;">
+      <section class="panel admin-section">
+        <div class="admin-section-heading">
+          <div><p class="store-eyebrow">Orders</p><h2>Recent Orders</h2></div>
+          <p>Confirm customer details and move each order through its delivery status.</p>
+        </div>
+        <div class="admin-toolbar">
+          <label>
             Filter by Status
             <select id="order-status-filter">
               <option value="">All</option>
@@ -256,14 +262,13 @@
         </div>
       </section>
 
-      <section class="panel">
-        <h2>User Directory</h2>
-        <p style="color: var(--text-muted);">
-          Search for customer accounts, check their order counts, and deactivate profiles that are no longer in use.
-          Admin accounts stay protected.
-        </p>
-        <div class="filters" style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-          <label style="flex: 1 1 240px;">
+      <section class="panel admin-section">
+        <div class="admin-section-heading">
+          <div><p class="store-eyebrow">Customers</p><h2>User Directory</h2></div>
+          <p>Review account activity and order counts. Admin accounts remain protected.</p>
+        </div>
+        <div class="admin-toolbar">
+          <label>
             Search Users
             <input type="search" id="user-search" placeholder="username, name, or email" />
           </label>
@@ -289,7 +294,7 @@
     <footer class="site-footer">
       <div class="footer-main">
         <a href="/" class="footer-logo-link" aria-label="Nour Tech home">
-          <img src="/data/nourtechlogo.png" alt="Nour Tech" class="footer-logo" />
+          <img src="/data/nour-tech-logo-transparent.png" alt="Nour Tech" class="footer-logo" />
         </a>
         <div class="footer-socials">
           <a

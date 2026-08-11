@@ -217,14 +217,7 @@ async function handleSubmit(event) {
     showStatus("Order received! Expect a call within 12 working hours.", "success");
   } catch (error) {
     console.error(error);
-    if (error.status === 401) {
-      showStatus(
-        'Please <a href="/login.html?next=/checkout.html" style="color: inherit; text-decoration: underline;">sign in</a> before placing an order.',
-        "error"
-      );
-    } else {
-      showStatus("Couldn't submit the order—please try again.", "error");
-    }
+    showStatus(error.message || "Couldn't submit the order—please try again.", "error");
   } finally {
     if (submitButton) {
       submitButton.disabled = false;

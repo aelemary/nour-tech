@@ -1337,7 +1337,6 @@ async function handleApi(req, res, pathname, searchParams) {
           return;
         }
         if (method === "POST") {
-          if (!requireAuth(req, res, session)) return;
           const body = await parseBody(req);
           const items = Array.isArray(body?.items)
             ? body.items
@@ -1349,8 +1348,11 @@ async function handleApi(req, res, pathname, searchParams) {
                 },
               ]
             : [];
-          if (!body || !items.length || !body.phone || !body.address) {
-            reply(400, { error: "Missing items, phone, or address" });
+          const customerName = String(
+            body?.customerName || session?.fullName || session?.username || ""
+          ).trim();
+          if (!body || !items.length || !customerName || !body.phone || !body.address) {
+            reply(400, { error: "Missing items, name, phone, or address" });
             return;
           }
           const productIds = Array.from(
@@ -1371,8 +1373,8 @@ async function handleApi(req, res, pathname, searchParams) {
             return;
           }
           const orderPayload = {
-            user_id: session.userId,
-            customer_name: body.customerName || session.fullName || session.username,
+            user_id: session?.userId || null,
+            customer_name: customerName,
             delivery_address: body.address,
             email: body.email || "",
             phone: body.phone,
