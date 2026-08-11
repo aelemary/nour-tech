@@ -3628,6 +3628,13 @@ footer.store-footer {
   min-height: clamp(35rem, 40vw, 41rem);
   overflow: hidden;
   background: #f7fbff;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.store-hero.is-dragging {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .store-hero::after {
