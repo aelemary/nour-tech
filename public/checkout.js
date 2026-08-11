@@ -1,6 +1,7 @@
 const API_BASE = "/api";
 let statusTimer = null;
 let currentItems = [];
+let currentTotal = 0;
 let mode = "cart";
 
 async function fetchJSON(url, options = {}) {
@@ -72,11 +73,14 @@ function renderSummary(items) {
   const contentEl = document.getElementById("checkout-content");
   const list = document.getElementById("summary-list");
   const totalEl = document.getElementById("checkout-total");
+  const submitTotalEl = document.getElementById("checkout-submit-total");
   if (!list || !totalEl) return;
 
   if (!items.length) {
     list.innerHTML = "";
     totalEl.textContent = formatCurrency(0);
+    if (submitTotalEl) submitTotalEl.textContent = formatCurrency(0);
+    currentTotal = 0;
     if (emptyEl) emptyEl.hidden = false;
     if (contentEl) contentEl.hidden = true;
     return;
@@ -99,17 +103,55 @@ function renderSummary(items) {
     if (item.type === "laptop" && item.ram) hintParts.push(`RAM: ${item.ram}`);
     const hintText = hintParts.join(" • ");
     const li = document.createElement("li");
-    li.innerHTML = `
-      <span>
-        <strong>${item.title}</strong>
-        <span class="field-hint">${hintText || item.gpu || ""}</span>
-      </span>
-      <span>${quantity} × ${formatCurrency(item.price, item.currency)}<small>${formatCurrency(lineTotal, item.currency)}</small></span>
-    `;
+    const itemDetails = document.createElement("span");
+    const itemTitle = document.createElement("strong");
+    const itemHint = document.createElement("span");
+    const itemPrice = document.createElement("span");
+    const itemLineTotal = document.createElement("small");
+
+    itemTitle.textContent = item.shortName || item.title;
+    itemHint.className = "field-hint";
+    itemHint.textContent = hintText || item.gpu || "";
+    itemPrice.textContent = `${quantity} × ${formatCurrency(item.price, item.currency)}`;
+    itemLineTotal.textContent = formatCurrency(lineTotal, item.currency);
+    itemDetails.append(itemTitle, itemHint);
+    itemPrice.append(itemLineTotal);
+    li.append(itemDetails, itemPrice);
     fragment.appendChild(li);
   });
   list.appendChild(fragment);
-  totalEl.textContent = formatCurrency(total, items[0]?.currency || "EGP");
+  currentTotal = total;
+  const formattedTotal = formatCurrency(total, items[0]?.currency || "EGP");
+  totalEl.textContent = formattedTotal;
+  if (submitTotalEl) submitTotalEl.textContent = formattedTotal;
+}
+
+function orderReference(id) {
+  return id ? `NT-${String(id).slice(-8).toUpperCase()}` : "Nour Tech order";
+}
+
+function showSuccess(order, total) {
+  const contentEl = document.getElementById("checkout-content");
+  const introEl = document.getElementById("checkout-intro");
+  const successEl = document.getElementById("checkout-success");
+  const orderIdEl = document.getElementById("success-order-id");
+  const emailEl = document.getElementById("success-email");
+  const totalEl = document.getElementById("success-total");
+  const emailNoteEl = document.getElementById("success-email-note");
+  if (!successEl) return;
+
+  if (contentEl) contentEl.hidden = true;
+  if (introEl) introEl.hidden = true;
+  if (orderIdEl) orderIdEl.textContent = orderReference(order?.id);
+  if (emailEl) emailEl.textContent = order?.email || "your email address";
+  if (totalEl) totalEl.textContent = formatCurrency(total);
+  if (emailNoteEl) {
+    emailNoteEl.textContent = order?.confirmationEmailSent
+      ? "A confirmation with your order details has been sent to your email."
+      : "Your order is confirmed. Our team will send your order details to your email shortly.";
+  }
+  successEl.hidden = false;
+  successEl.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function loadItems() {
@@ -186,7 +228,7 @@ async function handleSubmit(event) {
   }
 
   try {
-    await fetchJSON(`${API_BASE}/orders`, {
+    const order = await fetchJSON(`${API_BASE}/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -202,6 +244,7 @@ async function handleSubmit(event) {
       }),
     });
 
+    const submittedTotal = currentTotal;
     if (mode === "cart") {
       window.Cart.clear();
     } else {
@@ -211,10 +254,9 @@ async function handleSubmit(event) {
       }
     }
     currentItems = [];
-    renderSummary([]);
     form.reset();
     updateCartCount();
-    showStatus("Order received! Expect a call within 12 working hours.", "success");
+    showSuccess(order, submittedTotal);
   } catch (error) {
     console.error(error);
     showStatus(error.message || "Couldn't submit the order—please try again.", "error");

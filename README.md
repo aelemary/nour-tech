@@ -25,6 +25,9 @@ Do not commit `.env` files or service-role keys. If a service key is exposed, ro
 - `ICECAT_SHOPNAME`: Icecat shop or username value.
 - `ICECAT_API_URL`: Optional Icecat endpoint override.
 - `ICECAT_LANG`: Optional language code; defaults to `EN`.
+- `RESEND_API_KEY`: API key used to send order-confirmation emails through Resend.
+- `ORDER_EMAIL_FROM`: A verified sender address, for example `Nour Tech <orders@nourtecheg.com>`.
+- `ORDER_EMAIL_REPLY_TO`: Support email customers can reply to; defaults to Nour Tech support.
 
 ## Data model
 

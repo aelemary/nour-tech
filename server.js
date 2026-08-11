@@ -47,6 +47,9 @@ const ICECAT_SHOPNAME =
   process.env.ICECAT_SHOPNAME || process.env.ICECAT_USERNAME || "openIcecat-live";
 const ICECAT_LANG = process.env.ICECAT_LANG || "EN";
 const ICECAT_CONTENT_QUERY = process.env.ICECAT_CONTENT_QUERY ?? "";
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const ORDER_EMAIL_FROM = process.env.ORDER_EMAIL_FROM || "Nour Tech <orders@nourtecheg.com>";
+const ORDER_EMAIL_REPLY_TO = process.env.ORDER_EMAIL_REPLY_TO || "nourelemary28@gmail.com";
 
 function sanitizeFilename(name) {
   return name
@@ -187,6 +190,102 @@ function destroySessionsForUser() {
 
 function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatOrderCurrency(value) {
+  if (value == null || !Number.isFinite(Number(value))) return "Price on request";
+  return `EGP ${new Intl.NumberFormat("en-EG", { maximumFractionDigits: 0 }).format(Number(value))}`;
+}
+
+function formatOrderReference(orderId) {
+  return orderId ? `NT-${String(orderId).slice(-8).toUpperCase()}` : "Nour Tech order";
+}
+
+function orderConfirmationHtml(order) {
+  const orderItems = Array.isArray(order?.items) ? order.items : [];
+  const total = orderItems.reduce((sum, item) => {
+    const unitPrice = Number(item.unitPrice);
+    return Number.isFinite(unitPrice) ? sum + unitPrice * Math.max(1, Number(item.quantity) || 1) : sum;
+  }, 0);
+  const rows = orderItems
+    .map((item) => {
+      const quantity = Math.max(1, Number(item.quantity) || 1);
+      const unitPrice = item.unitPrice;
+      const itemTitle = item.product?.shortName || item.product?.title || "Nour Tech item";
+      return `<tr>
+        <td style="padding:14px 0;border-bottom:1px solid #dce7ef;color:#163a5c;font-weight:700;line-height:1.45;">${escapeHtml(itemTitle)}</td>
+        <td style="padding:14px 0 14px 14px;border-bottom:1px solid #dce7ef;color:#5d738a;text-align:center;white-space:nowrap;">${quantity}</td>
+        <td style="padding:14px 0 14px 14px;border-bottom:1px solid #dce7ef;color:#163a5c;font-weight:700;text-align:right;white-space:nowrap;">${escapeHtml(formatOrderCurrency(Number(unitPrice) * quantity))}</td>
+      </tr>`;
+    })
+    .join("");
+  const details = [
+    ["Delivery address", order.address],
+    ["Phone / WhatsApp", order.phone],
+    ["Order notes", order.notes],
+  ]
+    .filter(([, value]) => value)
+    .map(([label, value]) => `<p style="margin:0 0 8px;color:#526f89;line-height:1.55;"><strong style="color:#163a5c;">${label}:</strong> ${escapeHtml(value)}</p>`)
+    .join("");
+
+  return `<!doctype html>
+  <html lang="en"><body style="margin:0;background:#f3f7fb;font-family:Arial,Helvetica,sans-serif;color:#163a5c;">
+    <div style="max-width:680px;margin:0 auto;padding:30px 16px;">
+      <div style="overflow:hidden;border-radius:20px;background:#ffffff;box-shadow:0 12px 32px rgba(20,58,92,.12);">
+        <div style="padding:30px 34px;background:linear-gradient(135deg,#092a46,#155689);color:#ffffff;">
+          <div style="font-size:13px;font-weight:800;letter-spacing:1.5px;color:#77d0f2;">NOUR TECH</div>
+          <h1 style="margin:12px 0 8px;font-size:27px;line-height:1.2;">We received your order.</h1>
+          <p style="margin:0;color:#d7eafa;font-size:15px;line-height:1.6;">Thanks for choosing Nour Tech. Our team is now reviewing your request.</p>
+        </div>
+        <div style="padding:30px 34px;">
+          <div style="padding:16px 18px;border-radius:12px;background:#eaf6fb;margin-bottom:26px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#44708c;">Order reference</div>
+            <div style="margin-top:4px;font-size:20px;font-weight:800;color:#126fc2;">${formatOrderReference(order.id)}</div>
+          </div>
+          <p style="margin:0 0 20px;color:#526f89;line-height:1.6;">Hi ${escapeHtml(order.customerName)}, we’ll confirm stock, delivery, and payment details within <strong style="color:#163a5c;">12 working hours</strong>.</p>
+          <h2 style="margin:0 0 8px;font-size:18px;color:#163a5c;">Your order</h2>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;">
+            <thead><tr><th align="left" style="padding:9px 0;color:#6a8095;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">Item</th><th style="padding:9px 0 9px 14px;color:#6a8095;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">Qty</th><th align="right" style="padding:9px 0 9px 14px;color:#6a8095;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">Total</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div style="display:flex;justify-content:space-between;padding:18px 0 24px;font-size:18px;"><strong>Order total</strong><strong style="color:#126fc2;">${formatOrderCurrency(total)}</strong></div>
+          <div style="padding:20px;border-radius:12px;background:#f7f9fb;">${details}</div>
+        </div>
+        <div style="padding:20px 34px;background:#f7f9fb;border-top:1px solid #dce7ef;color:#60788f;font-size:13px;line-height:1.55;">Need help with your order? Reply to this email or contact Nour Tech at <a href="mailto:${escapeHtml(ORDER_EMAIL_REPLY_TO)}" style="color:#126fc2;">${escapeHtml(ORDER_EMAIL_REPLY_TO)}</a>.</div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
+async function sendOrderConfirmationEmail(order) {
+  if (!RESEND_API_KEY) return false;
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: ORDER_EMAIL_FROM,
+      to: [order.email],
+      reply_to: ORDER_EMAIL_REPLY_TO,
+      subject: `Order received — ${formatOrderReference(order.id)}`,
+      html: orderConfirmationHtml(order),
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Confirmation email failed: ${await response.text()}`);
+  }
+  return true;
 }
 
 async function parseBody(req) {
@@ -1351,8 +1450,13 @@ async function handleApi(req, res, pathname, searchParams) {
           const customerName = String(
             body?.customerName || session?.fullName || session?.username || ""
           ).trim();
-          if (!body || !items.length || !customerName || !body.phone || !body.address) {
-            reply(400, { error: "Missing items, name, phone, or address" });
+          const customerEmail = String(body?.email || "").trim().toLowerCase();
+          if (!body || !items.length || !customerName || !customerEmail || !body.phone || !body.address) {
+            reply(400, { error: "Missing items, name, email, phone, or address" });
+            return;
+          }
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+            reply(400, { error: "Enter a valid email address for your order confirmation" });
             return;
           }
           const productIds = Array.from(
@@ -1376,43 +1480,67 @@ async function handleApi(req, res, pathname, searchParams) {
             user_id: session?.userId || null,
             customer_name: customerName,
             delivery_address: body.address,
-            email: body.email || "",
+            email: customerEmail,
             phone: body.phone,
             notes: body.notes || "",
           };
-          const createdOrder = await sb("orders", {
-            method: "POST",
-            headers: { Prefer: "return=representation" },
-            body: orderPayload,
-          });
-          const orderRecord = createdOrder?.[0];
-          if (!orderRecord) {
-            reply(500, { error: "Failed to create order" });
-            return;
+          let orderRecord = null;
+          try {
+            const createdOrder = await sb("orders", {
+              method: "POST",
+              headers: { Prefer: "return=representation" },
+              body: orderPayload,
+            });
+            orderRecord = createdOrder?.[0];
+            if (!orderRecord) throw new Error("Failed to create order");
+
+            const productsById = new Map(products.map((product) => [product.id, product]));
+            const orderItemsPayload = items.map((item) => {
+              const productId = item.productId || item.id;
+              return {
+                order_id: orderRecord.id,
+                product_id: productId,
+                quantity: item.quantity != null ? Math.max(1, Number(item.quantity)) : 1,
+                unit_price: productsById.get(productId)?.price ?? null,
+              };
+            });
+            await sb("order_items", {
+              method: "POST",
+              headers: { Prefer: "return=representation" },
+              body: orderItemsPayload,
+            });
+
+            const hydrated = await sb("orders", {
+              params: {
+                select: "*,order_items(*)",
+                id: `eq.${orderRecord.id}`,
+              },
+            });
+            const hydratedOrders = await hydrateOrders(hydrated);
+            const order = hydratedOrders?.[0];
+            if (!order) throw new Error("Failed to load the completed order");
+
+            let confirmationEmailSent = false;
+            try {
+              confirmationEmailSent = await sendOrderConfirmationEmail(order);
+            } catch (error) {
+              console.error(`Could not send confirmation email for order ${order.id}:`, error.message);
+            }
+            reply(201, { ...order, confirmationEmailSent });
+          } catch (error) {
+            if (orderRecord?.id) {
+              try {
+                await sb("order_items", {
+                  method: "DELETE",
+                  params: { order_id: `eq.${orderRecord.id}` },
+                });
+                await sb("orders", { method: "DELETE", params: { id: `eq.${orderRecord.id}` } });
+              } catch (cleanupError) {
+                console.error(`Could not clean up incomplete order ${orderRecord.id}:`, cleanupError.message);
+              }
+            }
+            throw error;
           }
-          const productsById = new Map(products.map((product) => [product.id, product]));
-          const orderItemsPayload = items.map((item) => {
-            const productId = item.productId || item.id;
-            return {
-              order_id: orderRecord.id,
-              product_id: productId,
-              quantity: item.quantity != null ? Math.max(1, Number(item.quantity)) : 1,
-              unit_price: productsById.get(productId)?.price ?? null,
-            };
-          });
-          await sb("order_items", {
-            method: "POST",
-            headers: { Prefer: "return=representation" },
-            body: orderItemsPayload,
-          });
-          const hydrated = await sb("orders", {
-            params: {
-              select: "*,order_items(*)",
-              id: `eq.${orderRecord.id}`,
-            },
-          });
-          const hydratedOrders = await hydrateOrders(hydrated);
-          reply(201, hydratedOrders?.[0] || null);
           return;
         }
         if (method === "PATCH" && slug) {

@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="/styles.css" />
     <link rel="icon" type="image/png" href="/data/nour-tech-favicon.png" />
   </head>
-  <body>
+  <body class="storefront-page checkout-page">
     <header>
       <a class="logo" href="/" aria-label="Nour Tech home">
         <img src="/data/nour-tech-logo-transparent.png" alt="Nour Tech logo" class="logo-mark" />
@@ -33,58 +33,102 @@
       </nav>
     </header>
 
-    <main>
-      <section class="panel">
-        <h1>Checkout</h1>
-        <p style="color: var(--text-muted); max-width: 720px;">
-          Confirm the products you want and add your delivery details. No account is required.
-          Our team will reach out within 12 working hours to confirm delivery details.
-        </p>
-        <div id="checkout-status" class="order-status"></div>
-        <div id="checkout-empty" class="empty-state">
-          No items queued up. <a href="/index.html">Browse products</a> to start a new order.
+    <main class="checkout-main">
+      <section class="checkout-intro" id="checkout-intro">
+        <div>
+          <p class="store-eyebrow">Secure order request</p>
+          <h1>Complete your order</h1>
+          <p>Share your delivery details and we’ll confirm availability, delivery, and payment with you within 12 working hours.</p>
         </div>
-        <div id="checkout-content" hidden>
-          <div class="panel-lite">
-            <h2>Order Summary</h2>
-            <ul id="summary-list" class="summary-list"></ul>
-            <div class="cart-summary"><span>Total</span><strong id="checkout-total">EGP 0</strong></div>
+        <ol class="checkout-steps" aria-label="Checkout progress">
+          <li class="is-active"><span>1</span>Review</li>
+          <li><span>2</span>Delivery</li>
+          <li><span>3</span>Confirmed</li>
+        </ol>
+      </section>
+
+      <div id="checkout-status" class="order-status" aria-live="polite"></div>
+      <div id="checkout-empty" class="empty-state checkout-empty">
+        <strong>Your checkout is waiting for products.</strong>
+        <span>Add an item to your cart, then return here when you’re ready.</span>
+        <a class="btn btn-primary" href="/index.html">Browse products</a>
+      </div>
+
+      <div id="checkout-content" class="checkout-workspace" hidden>
+        <form id="checkout-form" class="checkout-form" autocomplete="on">
+          <section class="checkout-card checkout-form-card">
+            <div class="checkout-card-heading">
+              <span class="checkout-card-icon" aria-hidden="true">1</span>
+              <div>
+                <p class="store-eyebrow">Delivery details</p>
+                <h2>Where should we contact you?</h2>
+              </div>
+            </div>
+            <p class="checkout-card-copy">Your email receives your order confirmation and a copy of every order detail.</p>
+
+            <div class="checkout-fields">
+              <label>
+                Full name
+                <input type="text" name="customerName" autocomplete="name" placeholder="Name as it appears on the invoice" required />
+              </label>
+              <label>
+                Email address
+                <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+              </label>
+              <label>
+                Phone / WhatsApp
+                <input type="tel" name="phone" autocomplete="tel" placeholder="+20 10 0000 0000" required />
+              </label>
+              <label class="checkout-field-full">
+                Delivery address
+                <textarea name="address" rows="3" autocomplete="street-address" placeholder="City, district, street, building, and apartment" required></textarea>
+              </label>
+              <label class="checkout-field-full">
+                Order notes <span>(optional)</span>
+                <textarea name="notes" rows="3" placeholder="Access instructions, preferred delivery slot, or extra details"></textarea>
+              </label>
+            </div>
+          </section>
+
+          <section class="checkout-assurance" aria-label="Order assurances">
+            <span class="checkout-assurance-icon" aria-hidden="true">✓</span>
+            <div><strong>No account needed</strong><span>We only use these details to process your order and send its confirmation.</span></div>
+          </section>
+
+          <button type="submit" class="btn btn-primary checkout-submit" id="checkout-submit">
+            <span>Place order</span><strong id="checkout-submit-total">EGP 0</strong>
+          </button>
+          <p class="checkout-submit-hint">By placing your order, you’re requesting a confirmation call from Nour Tech. No online payment is taken at this stage.</p>
+        </form>
+
+        <aside class="checkout-summary checkout-card" aria-labelledby="checkout-summary-title">
+          <div class="checkout-card-heading">
+            <span class="checkout-card-icon checkout-card-icon-summary" aria-hidden="true">2</span>
+            <div>
+              <p class="store-eyebrow">Order summary</p>
+              <h2 id="checkout-summary-title">Your hardware</h2>
+            </div>
           </div>
-          <form id="checkout-form" class="order-form" autocomplete="on">
-            <h2 style="margin: 0;">Delivery Details</h2>
-            <label>
-              Full Name
-              <input type="text" name="customerName" placeholder="Name as it appears on the invoice" required />
-            </label>
-            <label>
-              Email (optional)
-              <input type="email" name="email" placeholder="example@email.com" />
-            </label>
-            <label>
-              Phone / WhatsApp
-              <input type="tel" name="phone" placeholder="+20 10 0000 0000" required />
-            </label>
-            <label>
-              Delivery Address
-              <textarea
-                name="address"
-                rows="3"
-                placeholder="City, district, street, building"
-                required
-              ></textarea>
-            </label>
-            <label>
-              Order Notes (optional)
-              <textarea
-                name="notes"
-                rows="3"
-                placeholder="Access instructions, preferred delivery slot, extra details"
-              ></textarea>
-            </label>
-            <button type="submit" class="btn btn-primary" id="checkout-submit">
-              Place Order
-            </button>
-          </form>
+          <ul id="summary-list" class="summary-list checkout-summary-list"></ul>
+          <div class="checkout-summary-total"><span>Order total</span><strong id="checkout-total">EGP 0</strong></div>
+          <div class="checkout-summary-note"><span aria-hidden="true">✦</span>Final availability and delivery details are confirmed with you before dispatch.</div>
+        </aside>
+      </div>
+
+      <section id="checkout-success" class="checkout-success" hidden aria-live="polite">
+        <div class="checkout-success-mark" aria-hidden="true">✓</div>
+        <p class="store-eyebrow">Order received</p>
+        <h1>Thanks — we’re processing your order.</h1>
+        <p>Your request is safely with the Nour Tech team. We’ll confirm stock, delivery, and payment details within 12 working hours.</p>
+        <div class="checkout-success-details">
+          <div><span>Order reference</span><strong id="success-order-id">—</strong></div>
+          <div><span>Confirmation email</span><strong id="success-email">—</strong></div>
+          <div><span>Order total</span><strong id="success-total">EGP 0</strong></div>
+        </div>
+        <p id="success-email-note" class="checkout-success-note">A confirmation with your order details has been sent to your email.</p>
+        <div class="checkout-success-actions">
+          <a href="/index.html" class="btn btn-primary">Continue shopping</a>
+          <a href="/contact.html" class="btn btn-outline">Contact our team</a>
         </div>
       </section>
     </main>
