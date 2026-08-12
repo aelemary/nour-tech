@@ -46,12 +46,12 @@ function updateCategorySeo(filters) {
   if (category) canonicalUrl.searchParams.set("type", category);
   const hasFacet = Boolean(filters.search || filters.brands.length || filters.minPrice || filters.maxPrice);
   document.title = category === "laptop"
-    ? "Laptop Store Egypt | Shop Laptops | Nour Tech"
+    ? "Nour Tech Laptop Store Egypt | Shop Laptops"
     : category === "gpu"
-      ? "Buy GPUs in Egypt | Graphics Cards | Nour Tech"
-      : "Computer Store Egypt | Laptops & Graphics Cards | Nour Tech";
+      ? "Nour Tech Egypt | Buy GPUs & Graphics Cards"
+      : "Nour Tech Egypt | Computer Store for Laptops & GPUs";
   setMetaContent('meta[name="description"]', description);
-  setMetaContent('meta[property="og:title"]', `${label} in Egypt | Nour Tech`);
+  setMetaContent('meta[property="og:title"]', document.title);
   setMetaContent('meta[property="og:description"]', description);
   setMetaContent('meta[property="og:url"]', canonicalUrl.href);
   let canonical = document.querySelector('link[rel="canonical"]');

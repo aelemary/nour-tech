@@ -1774,6 +1774,11 @@ async function serveStatic(res, pathname) {
 const server = http.createServer(async (req, res) => {
   const { pathname, query } = parse(req.url);
   const searchParams = new URLSearchParams(query || "");
+  if (pathname === "/index.html") {
+    res.writeHead(301, { Location: "/" });
+    res.end();
+    return;
+  }
   if (pathname === "/sitemap.xml") {
     try {
       await serveSitemap(res);
