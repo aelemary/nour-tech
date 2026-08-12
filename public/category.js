@@ -29,6 +29,47 @@ function formatCategoryLabel(type) {
   return title.endsWith("s") ? title : `${title}s`;
 }
 
+function setMetaContent(selector, content) {
+  const element = document.querySelector(selector);
+  if (element) element.setAttribute("content", content);
+}
+
+function updateCategorySeo(filters) {
+  const category = filters.category;
+  const label = category === "laptop" ? "Laptops" : category === "gpu" ? "Graphics Cards" : "Laptops & Graphics Cards";
+  const description = category === "laptop"
+    ? "Browse laptops in Egypt from Nour Tech. Compare brands, prices, and detailed specifications for gaming, work, and study."
+    : category === "gpu"
+      ? "Browse graphics cards in Egypt from Nour Tech. Compare brands, prices, and detailed specifications for gaming and creative work."
+      : "Browse laptops and graphics cards in Egypt from Nour Tech. Compare brands, prices, and detailed specifications.";
+  const canonicalUrl = new URL("/category.html", window.location.origin);
+  if (category) canonicalUrl.searchParams.set("type", category);
+  const hasFacet = Boolean(filters.search || filters.brands.length || filters.minPrice || filters.maxPrice);
+  document.title = `${label} in Egypt | Nour Tech`;
+  setMetaContent('meta[name="description"]', description);
+  setMetaContent('meta[property="og:title"]', `${label} in Egypt | Nour Tech`);
+  setMetaContent('meta[property="og:description"]', description);
+  setMetaContent('meta[property="og:url"]', canonicalUrl.href);
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.rel = "canonical";
+    document.head.appendChild(canonical);
+  }
+  canonical.href = canonicalUrl.href;
+  let robots = document.querySelector('meta[name="robots"]');
+  if (hasFacet) {
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.name = "robots";
+      document.head.appendChild(robots);
+    }
+    robots.content = "noindex, follow";
+  } else if (robots) {
+    robots.remove();
+  }
+}
+
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, { credentials: "include", ...options });
   if (!res.ok) {
@@ -266,13 +307,17 @@ function setupFilters() {
       gpuFamily: "",
       vram: "",
     }, brands);
-    syncFilterControls(readFilters());
+    const filters = readFilters();
+    updateCategorySeo(filters);
+    syncFilterControls(filters);
     renderProducts();
   });
   document.getElementById("clear-filters")?.addEventListener("click", () => {
     updateFilterUrl({ minPrice: "", maxPrice: "", price: "", cpu: "", laptopGpu: "", ram: "", gpuFamily: "", vram: "" });
-    populateBrandFilters(state.products.filter((product) => !readFilters().category || String(product.type || "").toLowerCase() === readFilters().category), readFilters());
-    syncFilterControls(readFilters());
+    const filters = readFilters();
+    updateCategorySeo(filters);
+    populateBrandFilters(state.products.filter((product) => !filters.category || String(product.type || "").toLowerCase() === filters.category), filters);
+    syncFilterControls(filters);
     renderProducts();
   });
 }
@@ -373,6 +418,7 @@ async function init() {
     );
     applyInitialParams();
     const filters = readFilters();
+    updateCategorySeo(filters);
     populateBrandFilters(
       state.products.filter((product) => !filters.category || String(product.type || "").toLowerCase() === filters.category),
       filters

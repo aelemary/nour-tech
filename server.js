@@ -50,6 +50,7 @@ const ICECAT_CONTENT_QUERY = process.env.ICECAT_CONTENT_QUERY ?? "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const ORDER_EMAIL_FROM = process.env.ORDER_EMAIL_FROM || "Nour Tech <orders@nourtecheg.com>";
 const ORDER_EMAIL_REPLY_TO = process.env.ORDER_EMAIL_REPLY_TO || "nourelemary28@gmail.com";
+const SITE_URL = "https://nourtecheg.com";
 
 function sanitizeFilename(name) {
   return name
@@ -85,6 +86,43 @@ function sendText(res, status, text, contentType = "text/plain") {
     "Access-Control-Allow-Origin": "*",
   });
   res.end(text);
+}
+
+function escapeXml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+async function serveSitemap(res) {
+  const pages = [
+    { path: "/", changefreq: "weekly", priority: "1.0" },
+    { path: "/category.html?type=laptop", changefreq: "daily", priority: "0.9" },
+    { path: "/category.html?type=gpu", changefreq: "daily", priority: "0.9" },
+    { path: "/contact.html", changefreq: "monthly", priority: "0.5" },
+  ];
+  const products = await sb("products", { params: { select: "id,created_at" } });
+  (products || []).forEach((product) => {
+    if (!product?.id) return;
+    pages.push({
+      path: `/laptop.html?id=${encodeURIComponent(product.id)}`,
+      lastmod: product.created_at,
+      changefreq: "weekly",
+      priority: "0.8",
+    });
+  });
+  const entries = pages
+    .map((page) => {
+      const lastmod = page.lastmod && !Number.isNaN(Date.parse(page.lastmod))
+        ? `<lastmod>${new Date(page.lastmod).toISOString().slice(0, 10)}</lastmod>`
+        : "";
+      return `<url><loc>${escapeXml(`${SITE_URL}${page.path}`)}</loc>${lastmod}<changefreq>${page.changefreq}</changefreq><priority>${page.priority}</priority></url>`;
+    })
+    .join("");
+  sendText(res, 200, `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries}</urlset>`, "application/xml; charset=utf-8");
 }
 
 function parseCookies(header = "") {
@@ -1736,6 +1774,15 @@ async function serveStatic(res, pathname) {
 const server = http.createServer(async (req, res) => {
   const { pathname, query } = parse(req.url);
   const searchParams = new URLSearchParams(query || "");
+  if (pathname === "/sitemap.xml") {
+    try {
+      await serveSitemap(res);
+    } catch (error) {
+      console.error("Failed to generate sitemap", error.message);
+      sendText(res, 500, "Unable to generate sitemap");
+    }
+    return;
+  }
   if (pathname.startsWith("/api/")) {
     await handleApi(req, res, pathname, searchParams);
     return;

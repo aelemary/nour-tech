@@ -24,6 +24,60 @@ function escapeHtml(value = "") {
     .replace(/'/g, "&#39;");
 }
 
+function setMetaContent(selector, content, attribute = "content") {
+  const element = document.querySelector(selector);
+  if (element) element.setAttribute(attribute, content);
+}
+
+function updateProductSeo(product) {
+  const title = String(product.title || "Product").trim();
+  const brand = String(product.company?.name || "Nour Tech").trim();
+  const description = String(product.description || `Shop ${title} from Nour Tech Egypt.`).trim();
+  const canonicalUrl = new URL("/laptop.html", window.location.origin);
+  canonicalUrl.searchParams.set("id", product.id);
+  const image = product.images?.[0] || "https://nourtecheg.com/hero-hardware-studio.png";
+  const pageTitle = `${title} | ${brand} | Nour Tech Egypt`;
+  document.title = pageTitle;
+  setMetaContent('meta[name="description"]', description);
+  setMetaContent('meta[property="og:title"]', pageTitle);
+  setMetaContent('meta[property="og:description"]', description);
+  setMetaContent('meta[property="og:url"]', canonicalUrl.href);
+  setMetaContent('meta[property="og:image"]', image);
+
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.rel = "canonical";
+    document.head.appendChild(canonical);
+  }
+  canonical.href = canonicalUrl.href;
+
+  let structuredData = document.getElementById("product-structured-data");
+  if (!structuredData) {
+    structuredData = document.createElement("script");
+    structuredData.id = "product-structured-data";
+    structuredData.type = "application/ld+json";
+    document.head.appendChild(structuredData);
+  }
+  structuredData.textContent = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: title,
+    description,
+    image: product.images?.filter(Boolean) || [],
+    sku: product.id,
+    brand: { "@type": "Brand", name: brand },
+    offers: {
+      "@type": "Offer",
+      url: canonicalUrl.href,
+      priceCurrency: product.currency || "EGP",
+      price: Number(product.price),
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+    },
+  });
+}
+
 function formatTypeLabel(type) {
   const normalized = String(type || "").trim().toLowerCase();
   if (!normalized) return "Product";
@@ -492,6 +546,7 @@ async function init() {
 
   try {
     const product = await fetchJSON(`${API_BASE}/products/${encodeURIComponent(id)}`);
+    updateProductSeo(product);
     renderProduct(product);
     attachPurchaseActions(product);
   } catch (error) {
