@@ -121,7 +121,7 @@ function readFilters() {
   return {
     category: STOREFRONT_CATEGORIES.includes(type) ? type : "",
     search: String(params.get("search") || "").trim(),
-    models: params.getAll("model").filter(Boolean),
+    brands: params.getAll("brand").filter(Boolean),
     minPrice: String(params.get("minPrice") || ""),
     maxPrice: String(params.get("maxPrice") || ""),
   };
@@ -133,26 +133,8 @@ function matchesPriceRange(product, minimum, maximum) {
   return (!minimum || price >= Number(minimum)) && (!maximum || price <= Number(maximum));
 }
 
-function modelSeries(product) {
-  const text = `${product.shortName || ""} ${product.title || ""}`.toLowerCase();
-  const series = [
-    ["rog strix", "ROG Strix"],
-    ["rog scar", "ROG SCAR"],
-    ["rog zephyrus", "ROG Zephyrus"],
-    ["tuf gaming", "TUF Gaming"],
-    ["victus", "Victus"],
-    ["legion", "Legion"],
-    ["loq", "LOQ"],
-    ["thinkpad", "ThinkPad"],
-    ["ideapad", "IdeaPad"],
-    ["macbook", "MacBook"],
-    ["rog astral", "ROG Astral"],
-    ["prime", "Prime"],
-    ["dual", "Dual"],
-  ];
-  const match = series.find(([needle]) => text.includes(needle));
-  if (match) return match[1];
-  return product.company?.name || "Other";
+function productBrand(product) {
+  return String(product.company?.name || "Other").trim() || "Other";
 }
 
 function filterProducts(products, filters) {
@@ -161,7 +143,7 @@ function filterProducts(products, filters) {
     const type = String(product.type || "").toLowerCase();
     if (filters.category && type !== filters.category) return false;
     if (search && !productText(product).includes(search)) return false;
-    if (filters.models.length && !filters.models.includes(modelSeries(product))) return false;
+    if (filters.brands.length && !filters.brands.includes(productBrand(product))) return false;
     if (!matchesPriceRange(product, filters.minPrice, filters.maxPrice)) return false;
     return true;
   });
@@ -208,21 +190,21 @@ function updatePriceRangeDisplay() {
   if (maxValue) maxValue.textContent = high >= maximum ? "Any price" : formatPrice(high);
 }
 
-function populateModelFilters(products, filters) {
-  const container = document.getElementById("filter-models");
+function populateBrandFilters(products, filters) {
+  const container = document.getElementById("filter-brands");
   if (!container) return;
-  const available = Array.from(new Set(products.map(modelSeries))).sort((a, b) => a.localeCompare(b));
+  const available = Array.from(new Set(products.map(productBrand))).sort((a, b) => a.localeCompare(b));
   container.innerHTML = "";
-  available.forEach((model) => {
+  available.forEach((brand) => {
     const label = document.createElement("label");
     label.className = "model-option";
     const input = document.createElement("input");
     input.type = "checkbox";
-    input.name = "model";
-    input.value = model;
-    input.checked = filters.models.includes(model);
+    input.name = "brand";
+    input.value = brand;
+    input.checked = filters.brands.includes(brand);
     const text = document.createElement("span");
-    text.textContent = model;
+    text.textContent = brand;
     label.append(input, text);
     container.appendChild(label);
   });
@@ -244,14 +226,15 @@ function syncFilterControls(filters) {
   updatePriceRangeDisplay();
 }
 
-function updateFilterUrl(updates = {}, models = []) {
+function updateFilterUrl(updates = {}, brands = []) {
   const url = new URL(window.location.href);
   Object.entries(updates).forEach(([key, value]) => {
     if (value) url.searchParams.set(key, value);
     else url.searchParams.delete(key);
   });
   url.searchParams.delete("model");
-  models.forEach((model) => url.searchParams.append("model", model));
+  url.searchParams.delete("brand");
+  brands.forEach((brand) => url.searchParams.append("brand", brand));
   window.history.replaceState({}, "", `${url.pathname}${url.search}`);
 }
 
@@ -270,7 +253,7 @@ function setupFilters() {
   });
   form.addEventListener("change", () => {
     const bounds = categoryPriceBounds(readFilters());
-    const models = Array.from(form.querySelectorAll('input[name="model"]:checked'), (input) => input.value);
+    const brands = Array.from(form.querySelectorAll('input[name="brand"]:checked'), (input) => input.value);
     const low = Number(minRange.value);
     const high = Number(maxRange.value);
     updateFilterUrl({
@@ -282,13 +265,13 @@ function setupFilters() {
       ram: "",
       gpuFamily: "",
       vram: "",
-    }, models);
+    }, brands);
     syncFilterControls(readFilters());
     renderProducts();
   });
   document.getElementById("clear-filters")?.addEventListener("click", () => {
     updateFilterUrl({ minPrice: "", maxPrice: "", price: "", cpu: "", laptopGpu: "", ram: "", gpuFamily: "", vram: "" });
-    populateModelFilters(state.products.filter((product) => !readFilters().category || String(product.type || "").toLowerCase() === readFilters().category), readFilters());
+    populateBrandFilters(state.products.filter((product) => !readFilters().category || String(product.type || "").toLowerCase() === readFilters().category), readFilters());
     syncFilterControls(readFilters());
     renderProducts();
   });
@@ -337,7 +320,7 @@ function updateHead(filters, count) {
       : "Browse available laptops and graphics cards.";
   }
   if (resultCount) resultCount.textContent = `${count} product${count === 1 ? "" : "s"}`;
-  const activeFilters = filters.models.length + [filters.minPrice, filters.maxPrice].filter(Boolean).length;
+  const activeFilters = filters.brands.length + [filters.minPrice, filters.maxPrice].filter(Boolean).length;
   if (resultContext) {
     resultContext.textContent = [
       filters.search ? `Search: "${filters.search}"` : "",
@@ -390,7 +373,7 @@ async function init() {
     );
     applyInitialParams();
     const filters = readFilters();
-    populateModelFilters(
+    populateBrandFilters(
       state.products.filter((product) => !filters.category || String(product.type || "").toLowerCase() === filters.category),
       filters
     );
