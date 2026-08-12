@@ -443,7 +443,7 @@ function renderProduct(product) {
       <p class="detail-price">${escapeHtml(formatPrice(product.price, product.currency))}</p>
       <h2>Ready to buy?</h2>
       <p class="field-hint">
-        All listed products are in stock. We deliver across Egypt in 0–2 business days for EGP 100–200, depending on location, and confirm your delivery details with you before dispatch.
+        All listed products are in stock. We deliver across Egypt in 0–2 business days: EGP 100 in Cairo/Giza and EGP 200 elsewhere. We confirm your delivery details with you before dispatch.
       </p>
       <div class="btn-stack">
         <button class="btn btn-primary" data-buy-now="${product.id}">Buy Now</button>
