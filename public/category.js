@@ -38,14 +38,18 @@ function updateCategorySeo(filters) {
   const category = filters.category;
   const label = category === "laptop" ? "Laptops" : category === "gpu" ? "Graphics Cards" : "Laptops & Graphics Cards";
   const description = category === "laptop"
-    ? "Browse laptops in Egypt from Nour Tech. Compare brands, prices, and detailed specifications for gaming, work, and study."
+    ? "Shop laptops in Egypt from Nour Tech, a laptop store for gaming, work, and study. Compare brands, prices in EGP, and detailed specifications."
     : category === "gpu"
-      ? "Browse graphics cards in Egypt from Nour Tech. Compare brands, prices, and detailed specifications for gaming and creative work."
-      : "Browse laptops and graphics cards in Egypt from Nour Tech. Compare brands, prices, and detailed specifications.";
+      ? "Buy graphics cards in Egypt from Nour Tech. Compare GPU brands, prices in EGP, and detailed specifications for gaming and creative work."
+      : "Browse laptops and buy graphics cards in Egypt from Nour Tech. Compare brands, prices in EGP, and detailed specifications.";
   const canonicalUrl = new URL("/category.html", window.location.origin);
   if (category) canonicalUrl.searchParams.set("type", category);
   const hasFacet = Boolean(filters.search || filters.brands.length || filters.minPrice || filters.maxPrice);
-  document.title = `${label} in Egypt | Nour Tech`;
+  document.title = category === "laptop"
+    ? "Laptop Store Egypt | Shop Laptops | Nour Tech"
+    : category === "gpu"
+      ? "Buy GPUs in Egypt | Graphics Cards | Nour Tech"
+      : "Computer Store Egypt | Laptops & Graphics Cards | Nour Tech";
   setMetaContent('meta[name="description"]', description);
   setMetaContent('meta[property="og:title"]', `${label} in Egypt | Nour Tech`);
   setMetaContent('meta[property="og:description"]', description);
@@ -358,11 +362,19 @@ function updateHead(filters, count) {
   const resultCount = document.getElementById("result-count");
   const resultContext = document.getElementById("result-context");
   const categoryLabel = filters.category ? formatCategoryLabel(filters.category) : "";
-  if (title) title.textContent = categoryLabel || "Catalog Search";
+  if (title) {
+    title.textContent = filters.category === "laptop"
+      ? "Laptop Store Egypt"
+      : filters.category === "gpu"
+        ? "Buy Graphics Cards in Egypt"
+        : "Laptops & Graphics Cards in Egypt";
+  }
   if (subtitle) {
-    subtitle.textContent = categoryLabel
-      ? `Browse available ${categoryLabel.toLowerCase()}.`
-      : "Browse available laptops and graphics cards.";
+    subtitle.textContent = filters.category === "laptop"
+      ? "Compare genuine laptops for gaming, work, study, and everyday performance."
+      : filters.category === "gpu"
+        ? "Compare GPUs for gaming, streaming, editing, and creative work."
+        : "Compare genuine laptops and graphics cards with clear prices in EGP.";
   }
   if (resultCount) resultCount.textContent = `${count} product${count === 1 ? "" : "s"}`;
   const activeFilters = filters.brands.length + [filters.minPrice, filters.maxPrice].filter(Boolean).length;
@@ -374,7 +386,7 @@ function updateHead(filters, count) {
   }
   const filterCount = document.getElementById("active-filter-count");
   if (filterCount) filterCount.textContent = activeFilters ? `${activeFilters} active` : "All products";
-  document.title = `Nour Tech | ${categoryLabel || "Catalog Search"}`;
+  updateCategorySeo(filters);
 }
 
 function renderProducts() {
