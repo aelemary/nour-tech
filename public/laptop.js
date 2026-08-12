@@ -75,6 +75,13 @@ function updateProductSeo(product) {
       availability: "https://schema.org/InStock",
       itemCondition: "https://schema.org/NewCondition",
     },
+    hasMerchantReturnPolicy: {
+      "@type": "MerchantReturnPolicy",
+      applicableCountry: "EG",
+      returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+      merchantReturnDays: 14,
+      merchantReturnLink: "https://nourtecheg.com/shipping-returns.html",
+    },
   });
 }
 
@@ -436,7 +443,7 @@ function renderProduct(product) {
       <p class="detail-price">${escapeHtml(formatPrice(product.price, product.currency))}</p>
       <h2>Ready to buy?</h2>
       <p class="field-hint">
-        Add it to your cart or check out now. We’ll confirm your order and delivery details with you.
+        All listed products are in stock. We deliver across Egypt in 2–5 business days and confirm your delivery details with you before dispatch.
       </p>
       <div class="btn-stack">
         <button class="btn btn-primary" data-buy-now="${product.id}">Buy Now</button>
@@ -445,7 +452,7 @@ function renderProduct(product) {
       </div>
       <div id="order-status" class="order-status"></div>
       <p class="field-hint">
-        Need multiple units or a custom tweak? Add the product to your cart and leave detailed notes at checkout.
+        <a href="/shipping-returns.html">View delivery and 14-day return terms</a>. Need multiple units or a custom tweak? Add the product to your cart and leave detailed notes at checkout.
       </p>
     </aside>
   `;

@@ -103,6 +103,7 @@ async function serveSitemap(res) {
     { path: "/category.html?type=laptop", changefreq: "daily", priority: "0.9" },
     { path: "/category.html?type=gpu", changefreq: "daily", priority: "0.9" },
     { path: "/contact.html", changefreq: "monthly", priority: "0.5" },
+    { path: "/shipping-returns.html", changefreq: "monthly", priority: "0.4" },
   ];
   const products = await sb("products", { params: { select: "id,created_at" } });
   (products || []).forEach((product) => {
@@ -123,6 +124,36 @@ async function serveSitemap(res) {
     })
     .join("");
   sendText(res, 200, `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries}</urlset>`, "application/xml; charset=utf-8");
+}
+
+function absoluteProductImage(image = "") {
+  const value = String(image || "").trim();
+  if (!value) return `${SITE_URL}/data/nourtechsmall.png`;
+  return /^https?:\/\//i.test(value) ? value : new URL(value, SITE_URL).href;
+}
+
+function productFeedDescription(product) {
+  return String(product.description || product.shortName || product.title || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 5000);
+}
+
+async function serveMerchantFeed(res) {
+  const products = await fetchProducts();
+  const items = products
+    .filter((product) => ["laptop", "gpu"].includes(String(product.type || "").toLowerCase()))
+    .filter((product) => Number.isFinite(Number(product.price)) && Number(product.price) >= 0)
+    .map((product) => {
+      const url = new URL("/laptop.html", SITE_URL);
+      url.searchParams.set("id", product.id);
+      const brand = product.company?.name || "Nour Tech";
+      const mpn = product.shortName || product.id;
+      return `<item><g:id>${escapeXml(product.id)}</g:id><g:title>${escapeXml(product.title)}</g:title><g:description>${escapeXml(productFeedDescription(product))}</g:description><g:link>${escapeXml(url.href)}</g:link><g:image_link>${escapeXml(absoluteProductImage(product.images?.[0]))}</g:image_link><g:availability>in_stock</g:availability><g:price>${escapeXml(`${Number(product.price).toFixed(2)} EGP`)}</g:price><g:condition>new</g:condition><g:brand>${escapeXml(brand)}</g:brand><g:mpn>${escapeXml(mpn)}</g:mpn></item>`;
+    })
+    .join("");
+  const feed = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel><title>Nour Tech Egypt product feed</title><link>${SITE_URL}/</link><description>In-stock laptops and graphics cards from Nour Tech Egypt</description>${items}</channel></rss>`;
+  sendText(res, 200, feed, "application/xml; charset=utf-8");
 }
 
 function parseCookies(header = "") {
@@ -1785,6 +1816,15 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       console.error("Failed to generate sitemap", error.message);
       sendText(res, 500, "Unable to generate sitemap");
+    }
+    return;
+  }
+  if (pathname === "/merchant-feed.xml") {
+    try {
+      await serveMerchantFeed(res);
+    } catch (error) {
+      console.error("Failed to generate Merchant Center feed", error.message);
+      sendText(res, 500, "Unable to generate product feed");
     }
     return;
   }
