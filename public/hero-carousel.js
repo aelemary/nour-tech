@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
     activeIndex = (index + slides.length) % slides.length;
     slides.forEach((slide, slideIndex) => {
       const active = slideIndex === activeIndex;
+      const image = slide.querySelector(".hero-scene img[data-src]");
+      if (active && image) {
+        image.src = image.dataset.src;
+        delete image.dataset.src;
+      }
       slide.hidden = !active;
       slide.classList.toggle("is-active", active);
       slide.setAttribute("aria-hidden", String(!active));

@@ -1,4 +1,5 @@
 const API_BASE = "/api";
+const GOOGLE_CUSTOMER_REVIEWS_MERCHANT_ID = 5838618467;
 let statusTimer = null;
 let currentItems = [];
 let currentTotal = 0;
@@ -130,6 +131,58 @@ function orderReference(id) {
   return id ? `NT-${String(id).slice(-8).toUpperCase()}` : "Nour Tech order";
 }
 
+function estimatedDeliveryDate(createdAt) {
+  const date = createdAt ? new Date(createdAt) : new Date();
+  if (Number.isNaN(date.getTime())) return "";
+
+  // Nour Tech delivers Sunday–Thursday. Give Google the latest promised date: two business days.
+  let businessDays = 0;
+  while (businessDays < 2) {
+    date.setDate(date.getDate() + 1);
+    const day = date.getDay();
+    if (day >= 0 && day <= 4) businessDays += 1;
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function showGoogleCustomerReviewOptIn(order) {
+  if (!order?.id || !order?.email) return;
+
+  const surveyConfig = {
+    merchant_id: GOOGLE_CUSTOMER_REVIEWS_MERCHANT_ID,
+    order_id: order.id,
+    email: order.email,
+    delivery_country: "EG",
+    estimated_delivery_date: estimatedDeliveryDate(order.createdAt),
+  };
+
+  const renderSurvey = () => {
+    if (!window.gapi?.load) return;
+    window.gapi.load("surveyoptin", () => {
+      if (window.gapi?.surveyoptin?.render) {
+        window.gapi.surveyoptin.render(surveyConfig);
+      }
+    });
+  };
+
+  window.renderOptIn = renderSurvey;
+  const existingScript = document.getElementById("google-customer-reviews-opt-in");
+  if (existingScript) {
+    renderSurvey();
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.id = "google-customer-reviews-opt-in";
+  script.src = "https://apis.google.com/js/platform.js?onload=renderOptIn";
+  script.async = true;
+  script.defer = true;
+  script.addEventListener("error", () => {
+    // An ad blocker must not interfere with displaying the completed order.
+  });
+  document.head.appendChild(script);
+}
+
 function showSuccess(order, total) {
   const contentEl = document.getElementById("checkout-content");
   const introEl = document.getElementById("checkout-intro");
@@ -151,6 +204,7 @@ function showSuccess(order, total) {
       : "Your order is confirmed. Our team will send your order details to your email shortly.";
   }
   successEl.hidden = false;
+  showGoogleCustomerReviewOptIn(order);
   successEl.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 

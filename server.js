@@ -893,6 +893,27 @@ function mapProduct(record, type) {
   return product;
 }
 
+function productCardData(product) {
+  return {
+    id: product.id,
+    type: product.type,
+    companyId: product.companyId,
+    shortName: product.shortName,
+    title: product.title,
+    price: product.price,
+    currency: product.currency,
+    description: String(product.description || "").slice(0, 420),
+    images: product.images.slice(0, 1),
+    warranty: product.warranty,
+    company: product.company,
+    gpu: product.gpu,
+    cpu: product.cpu,
+    ram: product.ram,
+    storage: product.storage,
+    display: product.display,
+  };
+}
+
 function mapUser(record) {
   if (!record) return null;
   return {
@@ -1215,6 +1236,7 @@ async function handleApi(req, res, pathname, searchParams) {
             searchParams.get("category") || searchParams.get("type") || forcedCategory
           );
           const companyId = searchParams.get("companyId") || "";
+          const cardView = searchParams.get("view") === "card";
           const products = await fetchProducts({
             ids: idsRaw,
             category,
@@ -1226,7 +1248,7 @@ async function handleApi(req, res, pathname, searchParams) {
             category,
             ids: idsRaw.length ? idsRaw : null,
           });
-          reply(200, results);
+          reply(200, cardView ? results.map(productCardData) : results);
           return;
         }
         if (method === "POST") {
@@ -1778,6 +1800,20 @@ const CONTENT_TYPES = {
   ".ico": "image/x-icon",
 };
 
+function staticCacheControl(filePath) {
+  const extension = path.extname(filePath).toLowerCase();
+  if ([".webp", ".avif", ".svg", ".woff2"].includes(extension)) {
+    return "public, max-age=604800, stale-while-revalidate=86400";
+  }
+  if ([".css", ".js"].includes(extension)) {
+    return "public, max-age=3600, stale-while-revalidate=86400";
+  }
+  if ([".png", ".jpg", ".jpeg", ".ico"].includes(extension)) {
+    return "public, max-age=86400, stale-while-revalidate=604800";
+  }
+  return "public, max-age=0, must-revalidate";
+}
+
 async function serveStatic(res, pathname) {
   let filePath = path.join(PUBLIC_DIR, pathname);
   try {
@@ -1798,6 +1834,7 @@ async function serveStatic(res, pathname) {
   res.writeHead(200, {
     "Content-Type": contentType,
     "Access-Control-Allow-Origin": "*",
+    "Cache-Control": staticCacheControl(filePath),
   });
   res.end(content);
 }

@@ -1,4 +1,5 @@
 const FOOTER_API_BASE = "/api";
+const GOOGLE_CUSTOMER_REVIEWS_BADGE_MERCHANT_ID = 5838618467;
 
 async function fetchFooterJSON(url, options = {}) {
   const response = await fetch(url, { credentials: "include", ...options });
@@ -32,6 +33,28 @@ function loadVercelAnalytics() {
   document.head.appendChild(script);
 }
 
+function loadGoogleCustomerReviewsBadge() {
+  const localHosts = new Set(["localhost", "127.0.0.1"]);
+  if (localHosts.has(window.location.hostname)) return;
+  if (document.getElementById("merchantWidgetScript")) return;
+
+  const startBadge = () => {
+    if (!window.merchantwidget?.start) return;
+    window.merchantwidget.start({
+      merchant_id: GOOGLE_CUSTOMER_REVIEWS_BADGE_MERCHANT_ID,
+      position: "BOTTOM_RIGHT",
+      region: "EG",
+    });
+  };
+
+  const script = document.createElement("script");
+  script.id = "merchantWidgetScript";
+  script.src = "https://www.gstatic.com/shopping/merchant/merchantwidget.js";
+  script.defer = true;
+  script.addEventListener("load", startBadge, { once: true });
+  document.head.appendChild(script);
+}
+
 function populateFooterContact(contact = {}) {
   document.querySelectorAll("[data-footer-contact]").forEach((node) => {
     const field = node.getAttribute("data-footer-contact");
@@ -49,14 +72,13 @@ function populateFooterContact(contact = {}) {
   const whatsappDigits = normalizePhoneForWhatsApp(whatsappRaw);
   const whatsappHref = whatsappDigits ? `https://wa.me/${whatsappDigits}` : "#";
 
-  const whatsappIconLink = document.getElementById("footer-whatsapp-link");
-  if (whatsappIconLink) {
+  document.querySelectorAll("[data-whatsapp-link], #footer-whatsapp-link").forEach((whatsappIconLink) => {
     whatsappIconLink.href = whatsappHref;
     if (!whatsappDigits) {
       whatsappIconLink.removeAttribute("target");
       whatsappIconLink.removeAttribute("rel");
     }
-  }
+  });
 
   const whatsappTextLink = document.getElementById("footer-whatsapp-text-link");
   if (whatsappTextLink) {
@@ -71,6 +93,7 @@ function populateFooterContact(contact = {}) {
 async function initFooter() {
   setFooterYear();
   loadVercelAnalytics();
+  loadGoogleCustomerReviewsBadge();
   try {
     const contact = await fetchFooterJSON(`${FOOTER_API_BASE}/contact`);
     populateFooterContact(contact || {});

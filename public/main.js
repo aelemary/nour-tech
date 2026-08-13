@@ -177,10 +177,11 @@ function createProductCard(product) {
   const typeLabel = formatCategoryLabel(product.type);
   const brandLabel = product.company?.name || "Unassigned";
   const image = product.images?.[0] || "/data/nourtechsmall.png";
+  const tileImage = window.NourImages?.tileThumbnailUrl(image) || image;
   const summary = productSummary(product);
   card.innerHTML = `
     <div class="product-media">
-      <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
+      <img src="${escapeHtml(tileImage)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
     </div>
     <div class="product-body">
       <span class="product-category">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
@@ -190,11 +191,7 @@ function createProductCard(product) {
       <span class="product-card-action">View product</span>
     </div>
   `;
-  card.querySelector("img")?.addEventListener("error", (event) => {
-    if (!event.currentTarget.src.endsWith("/data/nourtechsmall.png")) {
-      event.currentTarget.src = "/data/nourtechsmall.png";
-    }
-  });
+  window.NourImages?.setTileImage(card.querySelector("img"), image);
   const detailUrl = `/laptop.html?id=${encodeURIComponent(product.id)}`;
   card.dataset.href = detailUrl;
   card.addEventListener("click", (event) => {
@@ -215,10 +212,7 @@ function setMerchandisingImages(products) {
   mappings.forEach(([id, product]) => {
     const image = document.getElementById(id);
     if (!image) return;
-    image.src = product?.images?.[0] || "/data/nourtechsmall.png";
-    image.addEventListener("error", () => {
-      if (!image.src.endsWith("/data/nourtechsmall.png")) image.src = "/data/nourtechsmall.png";
-    });
+    window.NourImages?.setTileImage(image, product?.images?.[0] || "/data/nourtechsmall.png");
   });
 }
 
@@ -231,6 +225,7 @@ function setYear() {
 
 async function loadInventory(params = {}) {
   const url = new URL(`${API_BASE}/products`, window.location.origin);
+  url.searchParams.set("view", "card");
   Object.entries(params).forEach(([key, value]) => {
     if (value !== "" && value != null) {
       url.searchParams.set(key, value);

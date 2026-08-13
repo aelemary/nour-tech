@@ -88,6 +88,15 @@ function formatCurrency(amount, currency = "EGP") {
   }).format(Number(amount));
 }
 
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function showStatus(containerId, message, type = "success") {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -227,6 +236,7 @@ function startEditingProduct(productId) {
   if (!product) return;
   const form = document.getElementById("product-form");
   if (!form) return;
+  showAdminView("catalog");
   editingProductId = productId;
   const idInput = form.querySelector('input[name="id"]');
   if (idInput) idInput.value = product.id;
@@ -308,6 +318,26 @@ function updateStats() {
   document.getElementById("stat-admin-orders").textContent = pending;
 }
 
+function showAdminView(view) {
+  const panels = Array.from(document.querySelectorAll("[data-admin-view-panel]"));
+  const buttons = Array.from(document.querySelectorAll("[data-admin-view]"));
+  if (!panels.some((panel) => panel.dataset.adminViewPanel === view)) return;
+  panels.forEach((panel) => {
+    panel.hidden = panel.dataset.adminViewPanel !== view;
+  });
+  buttons.forEach((button) => {
+    const active = button.dataset.adminView === view;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+}
+
+function setupAdminViews() {
+  document.querySelectorAll("[data-admin-view]").forEach((button) => {
+    button.addEventListener("click", () => showAdminView(button.dataset.adminView));
+  });
+}
+
 function formatDate(value) {
   try {
     return new Intl.DateTimeFormat("en-EG", {
@@ -320,71 +350,71 @@ function formatDate(value) {
 }
 
 function renderOrders(orders) {
-  const tbody = document.getElementById("orders-body");
-  if (!tbody) return;
-  tbody.innerHTML = "";
+  const workspace = document.getElementById("orders-body");
+  if (!workspace) return;
+  workspace.innerHTML = "";
   if (!orders.length) {
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    cell.colSpan = 6;
-    cell.style.textAlign = "center";
-    cell.style.color = "var(--text-muted)";
-    cell.textContent = "No orders to display right now.";
-    row.appendChild(cell);
-    tbody.appendChild(row);
+    const empty = document.createElement("div");
+    empty.className = "admin-order-empty";
+    empty.textContent = "No orders to display right now.";
+    workspace.appendChild(empty);
     return;
   }
   const fragment = document.createDocumentFragment();
   orders.forEach((order) => {
-    const row = document.createElement("tr");
-    const contact = [order.phone, order.email].filter(Boolean).join(" • ");
     const items = Array.isArray(order.items) ? order.items : [];
+    let orderTotal = 0;
     const itemLines = items
       .map((item) => {
         const product = item.product;
         const quantity = item.quantity || 1;
-        if (!product) return `<div>Product removed <span class="field-hint">×${quantity}</span></div>`;
+        if (!product) {
+          return `<div class="admin-order-item"><span>Product removed</span><small>Qty ${quantity}</small></div>`;
+        }
         const unitPrice = item.unitPrice ?? product.price;
-        return `<div>${product.title} <span class="field-hint">×${quantity} • ${formatCurrency(unitPrice, product.currency)}</span></div>`;
+        const lineTotal = Number(unitPrice) * quantity;
+        if (Number.isFinite(lineTotal)) orderTotal += lineTotal;
+        return `<div class="admin-order-item"><span>${escapeHtml(product.title)}</span><small>${quantity} × ${escapeHtml(formatCurrency(unitPrice, product.currency))}</small><strong>${escapeHtml(formatCurrency(lineTotal, product.currency))}</strong></div>`;
       })
       .join("");
     const statusLabel = getStatusLabel(order.status);
-    row.innerHTML = `
-      <td>${order.id}</td>
-      <td>${formatDate(order.createdAt)}</td>
-      <td>${order.customerName}</td>
-      <td>${contact || "—"}</td>
-      <td>${itemLines || "No items"}</td>
-      <td data-status-cell="${order.id}"></td>
+    const card = document.createElement("article");
+    card.className = "admin-order-card";
+    card.innerHTML = `
+      <header class="admin-order-header">
+        <div>
+          <span class="admin-order-kicker">Order reference</span>
+          <h3>${escapeHtml(order.id)}</h3>
+          <p>Placed ${escapeHtml(formatDate(order.createdAt))}</p>
+        </div>
+        <div class="status-control" data-status-cell="${escapeHtml(order.id)}"></div>
+      </header>
+      <div class="admin-order-details">
+        <div><span>Customer</span><strong>${escapeHtml(order.customerName || "—")}</strong><small>${order.userId ? "Account customer" : "Guest checkout"}</small></div>
+        <div><span>Phone / WhatsApp</span><strong>${escapeHtml(order.phone || "—")}</strong><small>Email: ${escapeHtml(order.email || "—")}</small></div>
+        <div class="admin-order-address"><span>Delivery address</span><strong>${escapeHtml(order.address || "—")}</strong></div>
+        ${order.notes ? `<div class="admin-order-notes"><span>Customer notes</span><strong>${escapeHtml(order.notes)}</strong></div>` : ""}
+      </div>
+      <section class="admin-order-items">
+        <div class="admin-order-items-heading"><strong>Order items</strong><strong>${escapeHtml(formatCurrency(orderTotal, items[0]?.product?.currency || "EGP"))}</strong></div>
+        ${itemLines || '<div class="admin-order-item"><span>No items recorded</span></div>'}
+      </section>
     `;
-    const statusCell = row.querySelector(`[data-status-cell="${order.id}"]`);
+    const statusCell = card.querySelector("[data-status-cell]");
     if (statusCell) {
       statusCell.innerHTML = `
-        <div class="status-control">
-          <span class="status-pill ${order.status}">${statusLabel}</span>
-          <select class="status-select" data-order-status="${order.id}">
-            ${ORDER_STATUS_OPTIONS.map(
-              (option) =>
-                `<option value="${option.value}"${option.value === order.status ? " selected" : ""}>${
-                  option.label
-                }</option>`
-            ).join("")}
-          </select>
-        </div>
+        <span class="status-pill ${escapeHtml(order.status)}">${escapeHtml(statusLabel)}</span>
+        <select class="status-select" aria-label="Update order status" data-order-status="${escapeHtml(order.id)}">
+          ${ORDER_STATUS_OPTIONS.map(
+            (option) =>
+              `<option value="${option.value}"${option.value === order.status ? " selected" : ""}>${option.label}</option>`
+          ).join("")}
+        </select>
       `;
     }
-    if (order.notes) {
-      const listingCell = row.cells[4];
-      if (listingCell) {
-        const note = document.createElement("div");
-        note.className = "field-hint";
-        note.textContent = `Notes: ${order.notes}`;
-        listingCell.appendChild(note);
-      }
-    }
-    fragment.appendChild(row);
+    fragment.appendChild(card);
   });
-  tbody.appendChild(fragment);
+  workspace.appendChild(fragment);
 }
 
 function renderCompanyList() {
@@ -887,6 +917,7 @@ async function handleProductSubmit(event) {
 
 document.addEventListener("DOMContentLoaded", () => {
   setYear();
+  setupAdminViews();
 
   const companyForm = document.getElementById("company-form");
   const productForm = document.getElementById("product-form");

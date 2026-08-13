@@ -4,6 +4,8 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "generate:thumbnails": "node scripts/generate-product-thumbnails.js",
+    "refresh:thumbnails": "node scripts/generate-product-thumbnails.js --refresh"
   }
 }

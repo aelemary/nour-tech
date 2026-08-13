@@ -93,10 +93,11 @@ function renderCart(items) {
       `https://placehold.co/160x120?text=${encodeURIComponent(
         item.type ? item.type.toUpperCase() : "Product"
       )}`;
+    const tileImage = window.NourImages?.tileThumbnailUrl(image) || image;
     row.innerHTML = `
       <td>
         <div class="cart-item">
-          <img src="${image}" alt="${item.title}" loading="lazy" />
+          <img src="${tileImage}" alt="${item.title}" loading="lazy" decoding="async" />
           <div>
             <strong>${item.title}</strong>
             <div class="field-hint">${hintText || item.gpu || ""}</div>
@@ -117,6 +118,7 @@ function renderCart(items) {
       <td>${formatCurrency(lineTotal, item.currency)}</td>
       <td><button class="link-button" data-remove="${item.id}">Remove</button></td>
     `;
+    window.NourImages?.setTileImage(row.querySelector("img"), image, image);
     fragment.appendChild(row);
   });
 
@@ -142,11 +144,13 @@ async function loadCart() {
     let products = [];
     if (ids.length) {
       const url = new URL(`${API_BASE}/products`, window.location.origin);
+      url.searchParams.set("view", "card");
       url.searchParams.set("ids", ids.join(","));
       try {
         products = await fetchJSON(url.toString());
       } catch (error) {
         const fallbackUrl = new URL(`${API_BASE}/products`, window.location.origin);
+        fallbackUrl.searchParams.set("view", "card");
         products = await fetchJSON(fallbackUrl.toString());
       }
     }

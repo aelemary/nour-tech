@@ -225,8 +225,10 @@ function updatePriceRangeDisplay() {
   const high = Number(maxRange.value);
   const start = ((low - minimum) / (maximum - minimum || 1)) * 100;
   const end = ((high - minimum) / (maximum - minimum || 1)) * 100;
-  track.style.setProperty("--range-start", `${start}%`);
-  track.style.setProperty("--range-end", `${end}%`);
+  const isRtl = document.documentElement.dir === "rtl";
+  // Range inputs run from right to left in Arabic, so mirror only the visual fill.
+  track.style.setProperty("--range-start", `${isRtl ? 100 - end : start}%`);
+  track.style.setProperty("--range-end", `${isRtl ? 100 - start : end}%`);
   const anyRange = low <= minimum && high >= maximum;
   label.textContent = anyRange ? "Any budget" : `${formatPrice(low)} – ${formatPrice(high)}`;
   const minValue = document.getElementById("price-min-value");
@@ -332,10 +334,11 @@ function createProductCard(product) {
   const typeLabel = formatCategoryLabel(product.type);
   const brandLabel = product.company?.name || "Unassigned";
   const image = product.images?.[0] || "/data/nourtechsmall.png";
+  const tileImage = window.NourImages?.tileThumbnailUrl(image) || image;
   const summary = productSummary(product);
   card.innerHTML = `
     <div class="product-media">
-      <img src="${escapeHtml(image)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
+      <img src="${escapeHtml(tileImage)}" loading="lazy" decoding="async" alt="${escapeHtml(product.title)}" />
     </div>
     <div class="product-body">
       <span class="product-category">${escapeHtml(brandLabel)} • ${escapeHtml(typeLabel)}</span>
@@ -345,11 +348,7 @@ function createProductCard(product) {
       <span class="product-card-action">View product</span>
     </div>
   `;
-  card.querySelector("img")?.addEventListener("error", (event) => {
-    if (!event.currentTarget.src.endsWith("/data/nourtechsmall.png")) {
-      event.currentTarget.src = "/data/nourtechsmall.png";
-    }
-  });
+  window.NourImages?.setTileImage(card.querySelector("img"), image);
   card.addEventListener("click", () => {
     window.location.href = `/laptop.html?id=${encodeURIComponent(product.id)}`;
   });
@@ -422,7 +421,7 @@ async function init() {
   setupHeaderSearch();
   try {
     const categoryInventories = await Promise.all(
-      STOREFRONT_CATEGORIES.map((type) => fetchJSON(`${API_BASE}/products?type=${encodeURIComponent(type)}`))
+      STOREFRONT_CATEGORIES.map((type) => fetchJSON(`${API_BASE}/products?view=card&type=${encodeURIComponent(type)}`))
     );
     const products = categoryInventories.flat();
     state.products = (products || []).filter((product) =>
@@ -446,3 +445,4 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("nour:languagechange", updatePriceRangeDisplay);
