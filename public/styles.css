@@ -749,6 +749,18 @@ footer.site-footer a {
   color: #fff;
 }
 
+.footer-social-icon rect,
+.footer-social-icon circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.footer-social-icon .footer-social-dot {
+  fill: currentColor;
+  stroke: none;
+}
+
 .footer-social-image {
   object-fit: contain;
 }
@@ -1315,7 +1327,7 @@ body.page-main main {
     padding-inline: 0;
   }
 
-  nav {
+  header > nav {
     display: none;
     position: absolute;
     top: 100%;
@@ -1356,7 +1368,7 @@ body.page-main main {
     flex: 1;
   }
 
-  body.nav-open nav {
+  body.nav-open header > nav {
     display: flex;
   }
 
@@ -1364,7 +1376,7 @@ body.page-main main {
     display: inline-flex;
   }
 
-  nav a {
+  header > nav a {
     width: 100%;
     padding: 0.35rem 0;
   }
@@ -1614,14 +1626,7 @@ body.page-main main {
 }
 
 .announcement-socials {
-  position: absolute;
-  right: max(1rem, calc((100vw - 1320px) / 2));
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.3rem;
-  margin: 0;
-  padding: 0;
+  display: none !important;
 }
 
 .announcement-socials a {
@@ -1659,6 +1664,45 @@ body.page-main main {
 .announcement-socials .announcement-social-dot {
   fill: currentColor;
   stroke: none;
+}
+
+.whatsapp-float {
+  position: fixed;
+  right: auto;
+  left: max(1rem, env(safe-area-inset-left));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0;
+  border-radius: 999px;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 0.5rem 1.25rem rgba(9, 50, 27, 0.26);
+  font-size: 0.78rem;
+  font-weight: 800;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.whatsapp-float:hover,
+.whatsapp-float:focus-visible {
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 0.75rem 1.5rem rgba(9, 50, 27, 0.32);
+  outline: none;
+}
+
+.whatsapp-float svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: currentColor;
+}
+
+.whatsapp-float span {
+  display: none;
 }
 
 .store-header {
@@ -1864,6 +1908,11 @@ html[dir="rtl"] input[name="password"] {
 html[dir="rtl"] .announcement-socials {
   right: auto;
   left: max(1rem, calc((100vw - 1320px) / 2));
+}
+
+html[dir="rtl"] .whatsapp-float {
+  right: auto;
+  left: max(1rem, env(safe-area-inset-left));
 }
 
 html[dir="rtl"] .price-range-values,
