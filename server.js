@@ -50,6 +50,11 @@ const ICECAT_CONTENT_QUERY = process.env.ICECAT_CONTENT_QUERY ?? "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const ORDER_EMAIL_FROM = process.env.ORDER_EMAIL_FROM || "Nour Tech <orders@nourtecheg.com>";
 const ORDER_EMAIL_REPLY_TO = process.env.ORDER_EMAIL_REPLY_TO || "nourelemary28@gmail.com";
+const ORDER_NOTIFICATION_EMAILS = (process.env.ORDER_NOTIFICATION_EMAILS ||
+  "amrobadrcm@hotmail.com,nourelemary28@gmail.com")
+  .split(",")
+  .map((email) => email.trim())
+  .filter(Boolean);
 const SITE_URL = "https://nourtecheg.com";
 
 function sanitizeFilename(name) {
@@ -453,6 +458,67 @@ async function sendOrderConfirmationEmail(order) {
   });
   if (!response.ok) {
     throw new Error(`Confirmation email failed: ${await response.text()}`);
+  }
+  return true;
+}
+
+function orderNotificationHtml(order) {
+  const orderItems = Array.isArray(order?.items) ? order.items : [];
+  const total = orderItems.reduce((sum, item) => {
+    const unitPrice = Number(item.unitPrice);
+    return Number.isFinite(unitPrice) ? sum + unitPrice * Math.max(1, Number(item.quantity) || 1) : sum;
+  }, 0);
+  const items = orderItems
+    .map((item) => {
+      const quantity = Math.max(1, Number(item.quantity) || 1);
+      const title = item.product?.shortName || item.product?.title || "Nour Tech item";
+      return `<li style="margin:0 0 8px;line-height:1.5;"><strong>${escapeHtml(title)}</strong> &times; ${quantity} — ${escapeHtml(formatOrderCurrency(Number(item.unitPrice) * quantity))}</li>`;
+    })
+    .join("");
+
+  return `<!doctype html>
+  <html lang="en"><body style="margin:0;background:#f3f7fb;font-family:Arial,Helvetica,sans-serif;color:#163a5c;">
+    <div style="max-width:680px;margin:0 auto;padding:30px 16px;">
+      <div style="overflow:hidden;border-radius:20px;background:#ffffff;box-shadow:0 12px 32px rgba(20,58,92,.12);">
+        <div style="padding:30px 34px;background:linear-gradient(135deg,#092a46,#155689);color:#ffffff;">
+          <div style="font-size:13px;font-weight:800;letter-spacing:1.5px;color:#77d0f2;">NOUR TECH — NEW ORDER</div>
+          <h1 style="margin:12px 0 0;font-size:27px;line-height:1.2;">A customer placed an order.</h1>
+        </div>
+        <div style="padding:30px 34px;">
+          <p style="margin:0 0 20px;color:#526f89;line-height:1.6;">Reference: <strong style="color:#126fc2;">${formatOrderReference(order.id)}</strong></p>
+          <h2 style="margin:0 0 10px;font-size:18px;">Customer details</h2>
+          <p style="margin:0 0 6px;color:#526f89;line-height:1.55;"><strong style="color:#163a5c;">Name:</strong> ${escapeHtml(order.customerName)}</p>
+          <p style="margin:0 0 6px;color:#526f89;line-height:1.55;"><strong style="color:#163a5c;">Email:</strong> <a href="mailto:${escapeHtml(order.email)}" style="color:#126fc2;">${escapeHtml(order.email)}</a></p>
+          <p style="margin:0 0 6px;color:#526f89;line-height:1.55;"><strong style="color:#163a5c;">Phone / WhatsApp:</strong> ${escapeHtml(order.phone)}</p>
+          <p style="margin:0 0 22px;color:#526f89;line-height:1.55;"><strong style="color:#163a5c;">Delivery address:</strong> ${escapeHtml(order.address)}</p>
+          <h2 style="margin:0 0 10px;font-size:18px;">Items</h2>
+          <ul style="margin:0;padding-left:20px;color:#526f89;">${items}</ul>
+          <p style="margin:22px 0 0;font-size:19px;"><strong>Total:</strong> <strong style="color:#126fc2;">${formatOrderCurrency(total)}</strong></p>
+          ${order.notes ? `<p style="margin:20px 0 0;color:#526f89;line-height:1.55;"><strong style="color:#163a5c;">Notes:</strong> ${escapeHtml(order.notes)}</p>` : ""}
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
+async function sendOrderNotificationEmail(order) {
+  if (!RESEND_API_KEY || !ORDER_NOTIFICATION_EMAILS.length) return false;
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: ORDER_EMAIL_FROM,
+      to: ORDER_NOTIFICATION_EMAILS,
+      reply_to: order.email,
+      subject: `New order — ${formatOrderReference(order.id)} — ${order.customerName}`,
+      html: orderNotificationHtml(order),
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Order notification email failed: ${await response.text()}`);
   }
   return true;
 }
@@ -1717,7 +1783,13 @@ async function handleApi(req, res, pathname, searchParams) {
             } catch (error) {
               console.error(`Could not send confirmation email for order ${order.id}:`, error.message);
             }
-            reply(201, { ...order, confirmationEmailSent });
+            let notificationEmailSent = false;
+            try {
+              notificationEmailSent = await sendOrderNotificationEmail(order);
+            } catch (error) {
+              console.error(`Could not send staff notification for order ${order.id}:`, error.message);
+            }
+            reply(201, { ...order, confirmationEmailSent, notificationEmailSent });
           } catch (error) {
             if (orderRecord?.id) {
               try {
