@@ -41,7 +41,10 @@ function handleAuthChange(user) {
   }
 }
 const statusTimers = new Map();
-const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+const MAX_SOURCE_UPLOAD_SIZE = 25 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = 1.5 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 1800;
+const TARGET_IMAGE_SIZE = 900 * 1024;
 const ORDER_STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
   { value: "confirmed", label: "Confirmed" },
@@ -288,6 +291,53 @@ function readFileAsDataURL(file) {
     reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsDataURL(file);
   });
+}
+
+function loadImageForCompression(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Couldn't read this image."));
+    };
+    image.src = url;
+  });
+}
+
+function canvasToWebp(canvas, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("Couldn't compress this image."))),
+      "image/webp",
+      quality
+    );
+  });
+}
+
+async function compressImageForUpload(file) {
+  const image = await loadImageForCompression(file);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(sourceWidth, sourceHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+  const context = canvas.getContext("2d", { alpha: true });
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  let blob = await canvasToWebp(canvas, 0.84);
+  for (const quality of [0.78, 0.72, 0.66]) {
+    if (blob.size <= TARGET_IMAGE_SIZE) break;
+    blob = await canvasToWebp(canvas, quality);
+  }
+
+  const stem = file.name.replace(/\.[^.]+$/, "") || "product-image";
+  return new File([blob], `${stem}.webp`, { type: "image/webp" });
 }
 
 function populateCompanySelect(elementId) {
@@ -812,29 +862,39 @@ async function handleCompanySubmit(event) {
 
 async function handleImageUpload(file) {
   if (!file) return;
-  if (file.size > MAX_UPLOAD_SIZE) {
-    showStatus("product-status", "Image exceeds 5MB limit.", "error");
+  if (!file.type.startsWith("image/")) {
+    showStatus("product-status", "Choose an image file (PNG, JPG, or WebP).", "error");
+    return;
+  }
+  if (file.size > MAX_SOURCE_UPLOAD_SIZE) {
+    showStatus("product-status", "Image exceeds the 25MB source limit.", "error");
     return;
   }
   try {
-    showStatus("product-status", "Uploading image…");
-    const dataUrl = await readFileAsDataURL(file);
+    showStatus("product-status", "Compressing image…");
+    const compressedFile = await compressImageForUpload(file);
+    if (compressedFile.size > MAX_UPLOAD_SIZE) {
+      throw new Error("The compressed image is still too large. Try a smaller source image.");
+    }
+    showStatus("product-status", "Uploading compressed image…");
+    const dataUrl = await readFileAsDataURL(compressedFile);
     const result = await fetchJSON(`${API_BASE}/uploads`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        filename: file.name,
+        filename: compressedFile.name,
         data: dataUrl,
       }),
     });
     appendImageUrl(result.url);
-    showStatus("product-status", "Image uploaded and attached.");
+    const saved = Math.max(0, Math.round((1 - compressedFile.size / file.size) * 100));
+    showStatus("product-status", `Compressed ${saved}% and attached image.`);
   } catch (error) {
     console.error(error);
     if (error.status === 401 || error.status === 403) {
       showStatus("product-status", "Admin access required to upload images.", "error");
     } else {
-      showStatus("product-status", "Couldn't upload image.", "error");
+      showStatus("product-status", error.message || "Couldn't upload image.", "error");
     }
   }
 }

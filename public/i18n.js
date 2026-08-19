@@ -119,7 +119,7 @@
     "Warranty (years)": "الضمان (سنين)",
     "Image Upload": "رفع صور",
     "Upload & Attach Image": "ارفع الصورة وضيفها",
-    "PNG, JPG, or WebP up to 5 MB. Uploaded links auto-fill below.": "PNG أو JPG أو WebP لحد 5 ميجا. روابط الصور بتتملي تحت تلقائي.",
+    "Images are resized and converted to WebP before upload. Source files can be up to 25 MB.": "الصور بتتصغّر وبتتحوّل لـ WebP قبل الرفع. حجم الملف الأصلي لحد 25 ميجا.",
     "Image URLs (comma separated or one per line)": "روابط الصور (بفاصلة أو رابط في كل سطر)",
     "Short Description": "وصف مختصر",
     "Icecat Product ID (optional)": "رقم المنتج في Icecat (اختياري)",

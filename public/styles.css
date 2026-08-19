@@ -967,6 +967,7 @@ body.page-main main {
 
 .gallery-track {
   display: flex;
+  direction: ltr;
   transition: transform 0.35s ease;
   width: 100%;
 }

@@ -137,7 +137,7 @@ function renderImages(images = [], title = "Product image") {
     .map(
       (url, index) =>
         `<figure class="gallery-slide" data-index="${index}">
-          <img src="${escapeHtml(url)}" alt="${escapeHtml(title)} ${index + 1}" loading="${index === 0 ? "eager" : "lazy"}" />
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(title)} ${index + 1}" loading="eager" decoding="async" />
         </figure>`
     )
     .join("");

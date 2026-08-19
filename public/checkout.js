@@ -183,7 +183,35 @@ function showGoogleCustomerReviewOptIn(order) {
   document.head.appendChild(script);
 }
 
-function showSuccess(order, total) {
+function trackPurchase(order, total, items = []) {
+  const transactionId = String(order?.id || "").trim();
+  if (!transactionId || typeof window.gtag !== "function") return;
+
+  const storageKey = `nour-tech-purchase:${transactionId}`;
+  try {
+    if (sessionStorage.getItem(storageKey)) return;
+    sessionStorage.setItem(storageKey, "1");
+  } catch (error) {
+    // Tracking must still work when browser storage is unavailable.
+  }
+
+  window.gtag("event", "purchase", {
+    transaction_id: transactionId,
+    affiliation: "Nour Tech Egypt",
+    value: Number(total) || 0,
+    currency: "EGP",
+    items: items.map((item) => ({
+      item_id: String(item.id || ""),
+      item_name: item.shortName || item.title || "Nour Tech product",
+      item_brand: item.company?.name || "Nour Tech",
+      item_category: item.type || "hardware",
+      price: Number(item.price) || 0,
+      quantity: Number(item.quantity) || 1,
+    })),
+  });
+}
+
+function showSuccess(order, total, purchasedItems = []) {
   const contentEl = document.getElementById("checkout-content");
   const introEl = document.getElementById("checkout-intro");
   const successEl = document.getElementById("checkout-success");
@@ -204,6 +232,7 @@ function showSuccess(order, total) {
       : "Your order is confirmed. Our team will send your order details to your email shortly.";
   }
   successEl.hidden = false;
+  trackPurchase(order, total, purchasedItems);
   showGoogleCustomerReviewOptIn(order);
   successEl.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -299,6 +328,7 @@ async function handleSubmit(event) {
     });
 
     const submittedTotal = currentTotal;
+    const submittedItems = currentItems.map((item) => ({ ...item }));
     if (mode === "cart") {
       window.Cart.clear();
     } else {
@@ -310,7 +340,7 @@ async function handleSubmit(event) {
     currentItems = [];
     form.reset();
     updateCartCount();
-    showSuccess(order, submittedTotal);
+    showSuccess(order, submittedTotal, submittedItems);
   } catch (error) {
     console.error(error);
     showStatus(error.message || "Couldn't submit the order—please try again.", "error");

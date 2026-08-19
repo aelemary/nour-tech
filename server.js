@@ -126,6 +126,99 @@ async function serveSitemap(res) {
   sendText(res, 200, `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries}</urlset>`, "application/xml; charset=utf-8");
 }
 
+function replaceHeadTag(html, pattern, replacement) {
+  return html.replace(pattern, replacement);
+}
+
+function injectSeoHead(html, { title, description, canonical, image, robots = "", structuredData = null }) {
+  let output = html;
+  const safeTitle = escapeHtml(title);
+  const safeDescription = escapeHtml(description);
+  const safeCanonical = escapeHtml(canonical);
+  const safeImage = escapeHtml(image);
+
+  output = replaceHeadTag(output, /<title>[\s\S]*?<\/title>/i, `<title>${safeTitle}</title>`);
+  output = replaceHeadTag(output, /<meta name="description" content="[^"]*"\s*\/?>(?:<\/meta>)?/i, `<meta name="description" content="${safeDescription}" />`);
+  output = replaceHeadTag(output, /<meta property="og:title" content="[^"]*"\s*\/?>(?:<\/meta>)?/i, `<meta property="og:title" content="${safeTitle}" />`);
+  output = replaceHeadTag(output, /<meta property="og:description" content="[^"]*"\s*\/?>(?:<\/meta>)?/i, `<meta property="og:description" content="${safeDescription}" />`);
+  output = replaceHeadTag(output, /<meta property="og:image" content="[^"]*"\s*\/?>(?:<\/meta>)?/i, `<meta property="og:image" content="${safeImage}" />`);
+
+  const extraHead = [
+    `<link rel="canonical" href="${safeCanonical}" />`,
+    robots ? `<meta name="robots" content="${escapeHtml(robots)}" />` : "",
+    structuredData
+      ? `<script id="product-structured-data" type="application/ld+json">${JSON.stringify(structuredData).replace(/</g, "\\u003c")}</script>`
+      : "",
+  ].filter(Boolean).join("");
+  return output.replace(/<\/head>/i, `${extraHead}</head>`);
+}
+
+async function serveProductPage(res, productId) {
+  const id = String(productId || "").trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    sendText(res, 404, "Product not found");
+    return;
+  }
+  const product = (await fetchProducts({ ids: [id] }))[0];
+  if (!product) {
+    sendText(res, 404, "Product not found");
+    return;
+  }
+
+  const productName = truncateText(product.shortName || product.title, 105);
+  const title = `${productName} | ${product.company?.name || "Nour Tech"} | Nour Tech Egypt`;
+  const descriptionSource = String(product.description || "").trim().length >= 60
+    ? product.description
+    : `${productName} from Nour Tech Egypt. Compare its EGP price, detailed specifications, warranty, and delivery anywhere in Egypt.`;
+  const description = truncateText(descriptionSource, 180);
+  const canonical = `${SITE_URL}/laptop.html?id=${encodeURIComponent(product.id)}`;
+  const image = absoluteProductImage(product.images?.[0]);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.title,
+    description,
+    image: product.images.map(absoluteProductImage),
+    sku: product.id,
+    brand: { "@type": "Brand", name: product.company?.name || "Nour Tech" },
+    offers: {
+      "@type": "Offer",
+      url: canonical,
+      priceCurrency: "EGP",
+      price: Number(product.price),
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+    },
+  };
+  const template = await fs.readFile(path.join(PUBLIC_DIR, "laptop.html"), "utf8");
+  sendText(res, 200, injectSeoHead(template, { title, description, canonical, image, structuredData }), "text/html; charset=utf-8");
+}
+
+async function serveCategoryPage(res, searchParams) {
+  const type = String(searchParams.get("type") || "").toLowerCase();
+  const category = ["laptop", "gpu"].includes(type) ? type : "";
+  const title = category === "laptop"
+    ? "Nour Tech Laptop Store Egypt | Shop Laptops"
+    : category === "gpu"
+      ? "Nour Tech Egypt | Buy GPUs & Graphics Cards"
+      : "Nour Tech Egypt | Computer Store for Laptops & GPUs";
+  const description = category === "laptop"
+    ? "Shop laptops in Egypt from Nour Tech for gaming, work, and study. Compare brands, EGP prices, and detailed specifications."
+    : category === "gpu"
+      ? "Buy graphics cards in Egypt from Nour Tech. Compare GPU brands, EGP prices, and detailed specifications."
+      : "Browse laptops and graphics cards in Egypt from Nour Tech. Compare brands, prices in EGP, and detailed specifications.";
+  const canonical = category ? `${SITE_URL}/category.html?type=${category}` : `${SITE_URL}/category.html`;
+  const hasFacet = Boolean(searchParams.get("search") || searchParams.getAll("brand").length || searchParams.get("minPrice") || searchParams.get("maxPrice"));
+  const template = await fs.readFile(path.join(PUBLIC_DIR, "category.html"), "utf8");
+  sendText(res, 200, injectSeoHead(template, {
+    title,
+    description,
+    canonical,
+    image: `${SITE_URL}/hero-hardware-studio.png`,
+    robots: hasFacet ? "noindex, follow" : "",
+  }), "text/html; charset=utf-8");
+}
+
 function absoluteProductImage(image = "") {
   const value = String(image || "").trim();
   if (!value) return `${SITE_URL}/data/nourtechsmall.png`;
@@ -270,6 +363,13 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function truncateText(value, maxLength) {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  const clipped = normalized.slice(0, Math.max(1, maxLength - 1));
+  return `${clipped.replace(/\s+\S*$/, "").trim()}…`;
+}
+
 function formatOrderCurrency(value) {
   if (value == null || !Number.isFinite(Number(value))) return "Price on request";
   return `EGP ${new Intl.NumberFormat("en-EG", { maximumFractionDigits: 0 }).format(Number(value))}`;
@@ -357,12 +457,12 @@ async function sendOrderConfirmationEmail(order) {
   return true;
 }
 
-async function parseBody(req) {
+async function parseBody(req, { maxBytes = 1e6 } = {}) {
   return new Promise((resolve, reject) => {
     let data = "";
     req.on("data", (chunk) => {
       data += chunk;
-      if (data.length > 1e6) {
+      if (data.length > maxBytes) {
         reject(new Error("Payload too large"));
         req.connection.destroy();
       }
@@ -1729,7 +1829,7 @@ async function handleApi(req, res, pathname, searchParams) {
       case "uploads": {
         if (!requireAuth(req, res, session, { admin: true })) return;
         if (method === "POST") {
-          const body = await parseBody(req);
+          const body = await parseBody(req, { maxBytes: 3 * 1024 * 1024 });
           if (!body || !body.data) {
             reply(400, { error: "Missing base64 data" });
             return;
@@ -1862,6 +1962,24 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       console.error("Failed to generate Merchant Center feed", error.message);
       sendText(res, 500, "Unable to generate product feed");
+    }
+    return;
+  }
+  if (pathname === "/laptop.html") {
+    try {
+      await serveProductPage(res, searchParams.get("id"));
+    } catch (error) {
+      console.error("Failed to render product SEO page", error.message);
+      sendText(res, 500, "Unable to load product");
+    }
+    return;
+  }
+  if (pathname === "/category.html") {
+    try {
+      await serveCategoryPage(res, searchParams);
+    } catch (error) {
+      console.error("Failed to render category SEO page", error.message);
+      sendText(res, 500, "Unable to load category");
     }
     return;
   }
